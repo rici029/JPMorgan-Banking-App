@@ -10,6 +10,7 @@ import org.poo.utils.Utils;
 import org.poo.transactions.TransactionObserver;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @Getter @Setter
 public abstract class Account implements TransactionObserver {
@@ -22,6 +23,8 @@ public abstract class Account implements TransactionObserver {
     private ArrayList<Card> cards;
     private String alias;
     private ArrayList<Transactions> transactions;
+    private HashMap<String, Integer> nrOfTransactions;
+    private HashMap<String, Double> spendingThreshold;
 
     public Account(final String email, final String currency, final String accountType) {
         this.email = email;
@@ -33,6 +36,8 @@ public abstract class Account implements TransactionObserver {
         this.cards = new ArrayList<>();
         this.alias = "";
         this.transactions = new ArrayList<>();
+        this.nrOfTransactions = new HashMap<>();
+        this.spendingThreshold = new HashMap<>();
     }
 
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.account.AccountSavings;
 import org.poo.card.Card;
+import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
 import org.poo.transactions.TransactionAction;
 import org.poo.transactions.TransactionCard;
@@ -17,6 +18,7 @@ import org.poo.user.User;
 import org.poo.account.Account;
 import org.poo.account.AccountFactory;
 import org.poo.utils.Utils;
+import org.poo.commerciant.CommerciantOperation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -159,7 +161,8 @@ public final class AccountOperations {
                                  final HashMap<String, Account> cardAccountMap,
                                  final ArrayNode output,
                                  final HashMap<String, User> usersAccountMap,
-                                 final HashMap<String, User> usersCardsMap) {
+                                 final HashMap<String, User> usersCardsMap,
+                                 final ArrayList<Commerciant> commerciants) {
         double convertedAmount;
         String cardNumber = command.getCardNumber();
         double amount = command.getAmount();
@@ -201,6 +204,9 @@ public final class AccountOperations {
                 return;
             }
             account.pay(amount);
+            CashbackOperations.getCashback(account,
+                    CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants),
+                    amount, user, exchangeRates);
             Transactions transaction = new TransactionPayment(command.getTimestamp(),
                     "Card payment", amount,
                     command.getCommerciant());
@@ -216,6 +222,8 @@ public final class AccountOperations {
                 return;
             }
             account.pay(convertedAmount);
+            CashbackOperations.getCashback(account, CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants), convertedAmount, user,
+                    exchangeRates);
             Transactions transaction = new TransactionPayment(command.getTimestamp(),
                     "Card payment", convertedAmount,
                     command.getCommerciant());

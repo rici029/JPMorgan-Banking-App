@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.poo.appOperations.AppOperationsSingleton;
 import org.poo.checker.Checker;
 import org.poo.checker.CheckerConstants;
+import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
 import org.poo.fileio.ObjectInput;
 import org.poo.user.User;
@@ -80,9 +81,10 @@ public final class Main {
         HashMap<String, HashMap<String,
                 Double>> exchangeRates = Utils.createExchangeRates(inputData.getExchangeRates());
         ArrayList<User> users = Utils.createUsers(inputData.getUsers());
+        ArrayList<Commerciant> commerciants = Utils.createCommerciant(inputData.getCommerciants());
 
         AppOperationsSingleton appOperations = AppOperationsSingleton.getInstance(exchangeRates,
-                commands, users);
+                commands, users, commerciants);
 
         appOperations.startApp(output);
 

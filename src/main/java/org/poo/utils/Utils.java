@@ -1,5 +1,7 @@
 package org.poo.utils;
 
+import org.poo.commerciant.Commerciant;
+import org.poo.fileio.CommerciantInput;
 import org.poo.fileio.ExchangeInput;
 import org.poo.fileio.UserInput;
 import org.poo.user.User;
@@ -7,6 +9,9 @@ import org.poo.user.User;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
 
 public final class Utils {
     private Utils() {
@@ -75,14 +80,29 @@ public final class Utils {
     public static ArrayList<User> createUsers(final UserInput[] userInputs) {
         ArrayList<User> users = new ArrayList<>();
         for (UserInput userInput : userInputs) {
+            int age = calculateAge(userInput.getBirthDate());
             User user = new User(userInput.getFirstName(), userInput.getLastName(),
-                    userInput.getEmail());
+                    userInput.getEmail(), userInput.getBirthDate(),
+                    userInput.getOccupation(), age);
             users.add(user);
         }
 
         return users;
     }
 
+
+    /**
+     * Calculates the age of a user based on the birth date.
+     * @param birthDate the birth date of the user
+     * @return the age of the user
+     */
+    public static int calculateAge(final String birthDate) {
+        LocalDate birthDateLocal = LocalDate.parse(birthDate, DateTimeFormatter.ISO_DATE);
+
+        LocalDate currentDate = LocalDate.now();
+
+        return Period.between(birthDateLocal, currentDate).getYears();
+    }
     /**
      * Creates a HashMap of exchange rates from input.
      *
@@ -104,5 +124,22 @@ public final class Utils {
         }
 
         return exchangeRatesMap;
+    }
+
+    /**
+     * Creates a list of commerciants from input.
+     * @param commerciantInputs the list of commerciants from input
+     * @return the list of commerciants
+     */
+    public static ArrayList<Commerciant> createCommerciant(final CommerciantInput[] commerciantInputs) {
+        ArrayList<Commerciant> commerciants = new ArrayList<>();
+        for (CommerciantInput commerciantInput : commerciantInputs) {
+            Commerciant commerciant = new Commerciant(commerciantInput.getCommerciant(),
+                    commerciantInput.getAccount(), commerciantInput.getType(),
+                    commerciantInput.getCashbackStrategy());
+            commerciants.add(commerciant);
+        }
+
+        return commerciants;
     }
 }

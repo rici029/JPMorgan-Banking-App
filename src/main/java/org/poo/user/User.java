@@ -17,13 +17,26 @@ public class User implements TransactionObserver {
     private String email;
     private ArrayList<Account> accounts;
     private ArrayList<Transactions> transactions;
+    private String birthDate;
+    private String occupation;
+    private int age;
+    private String plan;
 
-    public User(final String firstName, final String lastName, final String email) {
+    public User(final String firstName, final String lastName, final String email,
+                final String birthDate, final String occupation, final int age) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.accounts = new ArrayList<>();
         this.transactions = new ArrayList<>();
+        this.birthDate = birthDate;
+        this.occupation = occupation;
+        this.age = age;
+        if(occupation.equals("student")) {
+            this.plan = "student";
+        } else {
+            this.plan = "standard";
+        }
     }
 
     /**
