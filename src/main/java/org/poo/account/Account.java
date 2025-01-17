@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.Setter;
 import org.poo.card.Card;
+import org.poo.commerciant.Commerciant;
 import org.poo.transactions.Transactions;
 import org.poo.utils.Utils;
 import org.poo.transactions.TransactionObserver;
@@ -23,8 +24,9 @@ public abstract class Account implements TransactionObserver {
     private ArrayList<Card> cards;
     private String alias;
     private ArrayList<Transactions> transactions;
-    private HashMap<String, Integer> nrOfTransactions;
-    private HashMap<String, Double> spendingThreshold;
+    private HashMap<Commerciant, Integer> nrOfTransactions;
+    private double spendingThreshold;
+    private HashMap<String, Double> discounts;
 
     public Account(final String email, final String currency, final String accountType) {
         this.email = email;
@@ -37,7 +39,8 @@ public abstract class Account implements TransactionObserver {
         this.alias = "";
         this.transactions = new ArrayList<>();
         this.nrOfTransactions = new HashMap<>();
-        this.spendingThreshold = new HashMap<>();
+        this.discounts = new HashMap<>();
+        this.spendingThreshold = 0;
     }
 
 

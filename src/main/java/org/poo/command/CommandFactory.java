@@ -41,6 +41,7 @@ public final class CommandFactory {
             case "addInterest" -> new AddInterestCommand(commandInput, context);
             case "withdrawSavings" -> new WithdrawSavingsCommand(commandInput, context);
             case "upgradePlan" -> new UpgradePlanCommand(commandInput, context);
+            case "cashWithdrawal" -> new CashWithdrawalCommand(commandInput, context);
             default -> {
                 System.out.println("Command " + commandType + " not found");
                 yield null;

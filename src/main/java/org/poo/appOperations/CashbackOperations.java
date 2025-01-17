@@ -21,10 +21,15 @@ public final class CashbackOperations {
     public static void getCashback(final Account account, final Commerciant commerciant,
                                    final double amount, final User user,
                                    final HashMap<String, HashMap<String, Double>> exchangeRates) {
+        HashMap<String, Double> discounts = account.getDiscounts();
+        if(discounts.containsKey(commerciant.getType()) && discounts.get(commerciant.getType()) > 0) {
+            account.deposit(amount * discounts.get(commerciant.getType()));
+            discounts.put(commerciant.getType(), 0.0);
+        }
         if(commerciant.getCashbackStrategy().equals("nrOfTransactions")) {
             addNrOfTransactionsCashback(account, commerciant, amount);
         } else {
-            addSpendingThresholdCashback(account, commerciant, amount, user, exchangeRates);
+            addSpendingThresholdCashback(account, amount, user, exchangeRates);
         }
     }
 
@@ -36,94 +41,60 @@ public final class CashbackOperations {
      */
     private static void addNrOfTransactionsCashback(final Account account,
                                                     final Commerciant commerciant, double amount) {
-        HashMap<String, Integer> nrOfTransactions = account.getNrOfTransactions();
-        if(nrOfTransactions.containsKey(commerciant.getType())) {
-            if(nrOfTransactions.get(commerciant.getType()) + 1 == getCashbackNoOfTransactionsNeeded(commerciant)) {
-                account.deposit(amount * getCashabckPercentage(commerciant));
-                nrOfTransactions.put(commerciant.getType(), 1);
-            } else {
-                nrOfTransactions.put(commerciant.getType(), nrOfTransactions.get(commerciant.getType()) + 1);
-            }
+        HashMap<Commerciant, Integer> nrOfTransactions = account.getNrOfTransactions();
+        if(nrOfTransactions.containsKey(commerciant)) {
+            nrOfTransactions.put(commerciant, nrOfTransactions.get(commerciant) + 1);
         } else {
-            nrOfTransactions.put(commerciant.getType(), 1);
+            nrOfTransactions.put(commerciant, 1);
         }
-    }
-
-    /**
-     * Method that returns the number of transactions needed for cashback.
-     * @param commerciant the commerciant
-     * @return the number of transactions needed for cashback
-     */
-    private static int getCashbackNoOfTransactionsNeeded(final Commerciant commerciant) {
-        return switch (commerciant.getType()) {
-            case "Food" -> 3;
-            case "Clothes" -> 6;
-            case "Tech" -> 11;
-            default -> 0;
-        };
-    }
-
-    /**
-     * Method that returns the cashback percentage.
-     * @param commerciant the commerciant
-     * @return the cashback percentage
-     */
-    private static double getCashabckPercentage(final Commerciant commerciant) {
-        return switch (commerciant.getType()) {
-            case "Food" -> 0.02;
-            case "Clothes" -> 0.05;
-            case "Tech" -> 0.1;
-            default -> 0;
-        };
+        int nrOfTransToCommerciant = nrOfTransactions.get(commerciant);
+        HashMap<String, Double> discounts = account.getDiscounts();
+        if(nrOfTransToCommerciant == 2) {
+            if(!discounts.containsKey("Food")){
+                discounts.put("Food", 0.02);
+            }
+        } else if( nrOfTransToCommerciant == 5) {
+            if(!discounts.containsKey("Clothes")){
+                discounts.put("Clothes", 0.05);
+            }
+        } else if(nrOfTransToCommerciant == 10) {
+            if(!discounts.containsKey("Tech")){
+                discounts.put("Tech", 0.1);
+            }
+        }
     }
 
     /**
      * Method that adds cashback based on the spending threshold.
      * @param account the account
-     * @param commerciant the commerciant
      * @param amount the amount
      * @param user the user
      * @param exchangeRates the exchange rates
      */
     private static void addSpendingThresholdCashback(final Account account,
-                                                     final Commerciant commerciant,
                                                      final double amount,
                                                      final User user, final HashMap<String,
                                                         HashMap<String, Double>> exchangeRates ) {
-        HashMap<String, Double> spendingThreshold = account.getSpendingThreshold();
         double amountInRON = amount;
         if(!account.getCurrency().equals("RON")) {
             double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
                     account.getCurrency(), "RON");
             amountInRON = amount * exchangeRate;
         }
-        if(spendingThreshold.containsKey(commerciant.getType())) {
-            double threshold = spendingThreshold.get(commerciant.getType()) + amountInRON;
-            if(threshold >= 100) {
-                account.deposit(amount * getCashabckPercentageBySpendings(commerciant, user,
-                        threshold));
-            } else {
-                spendingThreshold.put(commerciant.getType(),
-                        spendingThreshold.get(commerciant.getType()) + amountInRON);
-            }
-        } else {
-            spendingThreshold.put(commerciant.getType(), amountInRON);
-            if(amountInRON >= 100) {
-                account.deposit(amount * getCashabckPercentageBySpendings(commerciant, user,
-                        amountInRON));
-            }
+        account.setSpendingThreshold(account.getSpendingThreshold() + amountInRON);
+        double spendingThreshold = account.getSpendingThreshold();
+        if(spendingThreshold >= 100) {
+            account.deposit(amount * getCashabckPercentageBySpendings(user, spendingThreshold));
         }
     }
 
     /**
      * Method that returns the cashback percentage based on the spendings.
-     * @param commerciant the commerciant
      * @param user the user
      * @param threshold the threshold
      * @return the cashback percentage
      */
-    private static double getCashabckPercentageBySpendings(final Commerciant commerciant,
-                                                           final User user, final double threshold) {
+    private static double getCashabckPercentageBySpendings(final User user, final double threshold) {
         if (threshold >= 100 && threshold < 300) {
             switch (user.getPlan()) {
                 case "student":

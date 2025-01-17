@@ -35,7 +35,7 @@ public class WithdrawSavingsCommand extends BaseCommand {
             transaction.notifyObservers();
             return;
         }
-        if(!account.getAccountType().equals("Savings")){
+        if(!account.getAccountType().equals("savings")){
             Transactions transaction = new TransactionAction(command.getTimestamp(),
                     "Account is not of type savings.");
             transaction.registerObserver(user);

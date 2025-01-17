@@ -18,6 +18,6 @@ public class AddInterestCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-        AccountOperations.addInterest(accountMap, command, output);
+        AccountOperations.addInterest(accountMap, command, output, usersAccountsMap);
     }
 }

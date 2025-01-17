@@ -13,14 +13,16 @@ public class TransactionSplitPayment extends Transactions {
     private double amount;
     private String currency;
     private List<String> accounts;
+    private String splitPaymentType;
 
     public TransactionSplitPayment(final double amount, final String currency,
                                    final List<String> accounts, final String description,
-                                   final int timestamp) {
+                                   final int timestamp, final String splitPaymentType) {
         super(description, timestamp);
         this.amount = amount;
         this.currency = currency;
         this.accounts = accounts;
+        this.splitPaymentType = splitPaymentType;
     }
 
     /**
@@ -37,6 +39,7 @@ public class TransactionSplitPayment extends Transactions {
             accountsArray.add(account);
         }
         transactionNode.put("involvedAccounts", accountsArray);
+        transactionNode.put("splitPaymentType", getSplitPaymentType());
         transactionNode.put("description", getDescription());
         transactionNode.put("timestamp", getTimestamp());
         return transactionNode;

@@ -44,6 +44,9 @@ public final class CardOperations {
         }
         String iban = command.getAccount();
         User user = usersAccountsMap.get(iban);
+        if(user == null) {
+            return;
+        }
         if (!user.getEmail().equals(email)) {
             return;
         }

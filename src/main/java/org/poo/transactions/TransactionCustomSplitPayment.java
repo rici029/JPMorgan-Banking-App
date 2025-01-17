@@ -6,26 +6,23 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter @Setter
-public class TransactionErrorSplitPayment extends Transactions {
-
-    private double amount;
+public class TransactionCustomSplitPayment extends Transactions {
+    private ArrayList<Double> amountForUsers;
     private String currency;
     private List<String> accounts;
-    private String errorMessage;
     private String splitPaymentType;
 
-    public TransactionErrorSplitPayment(final String description, final int timestamp,
-                                        final double amount, final String currency,
-                                        final List<String> accounts, final String errorMessage,
-                                        final String splitPaymentType) {
+    public TransactionCustomSplitPayment(final String description, final int timestamp,
+                                         final ArrayList<Double> amountForUsers, final String currency,
+                                         final List<String> accounts, final String splitPaymentType) {
         super(description, timestamp);
-        this.amount = amount;
+        this.amountForUsers = amountForUsers;
         this.currency = currency;
         this.accounts = accounts;
-        this.errorMessage = errorMessage;
         this.splitPaymentType = splitPaymentType;
     }
 
@@ -36,18 +33,20 @@ public class TransactionErrorSplitPayment extends Transactions {
      */
     public ObjectNode printJson(final ObjectMapper mapper) {
         ObjectNode transactionNode = mapper.createObjectNode();
-        transactionNode.put("amount", getAmount());
+        ArrayNode amountForUsersArray = mapper.createArrayNode();
+        for (Double amount : getAmountForUsers()) {
+            amountForUsersArray.add(amount);
+        }
+        transactionNode.set("amountForUsers", amountForUsersArray);
         transactionNode.put("currency", getCurrency());
         ArrayNode accountsArray = mapper.createArrayNode();
         for (String account : getAccounts()) {
             accountsArray.add(account);
         }
-        transactionNode.set("involvedAccounts", accountsArray);
-        transactionNode.put("error", errorMessage);
+        transactionNode.put("involvedAccounts", accountsArray);
         transactionNode.put("splitPaymentType", getSplitPaymentType());
         transactionNode.put("description", getDescription());
         transactionNode.put("timestamp", getTimestamp());
         return transactionNode;
     }
-
 }

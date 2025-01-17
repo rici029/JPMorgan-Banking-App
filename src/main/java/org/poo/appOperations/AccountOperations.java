@@ -7,13 +7,7 @@ import org.poo.account.AccountSavings;
 import org.poo.card.Card;
 import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
-import org.poo.transactions.TransactionAction;
-import org.poo.transactions.TransactionCard;
-import org.poo.transactions.TransactionPayment;
-import org.poo.transactions.TransactionSplitPayment;
-import org.poo.transactions.Transactions;
-import org.poo.transactions.TransactionErrorSplitPayment;
-import org.poo.transactions.TransactionTransfer;
+import org.poo.transactions.*;
 import org.poo.user.User;
 import org.poo.account.Account;
 import org.poo.account.AccountFactory;
@@ -30,6 +24,33 @@ public final class AccountOperations {
         //not called
     }
 
+    public static double checkForCommission(final Account account, final double amount,
+                                             final String planType,
+                                             final HashMap<String,
+                                                     HashMap<String, Double>> exchangeRates) {
+        double amountInRON = amount;
+        if (!account.getCurrency().equals("RON")) {
+            double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
+                    account.getCurrency(), "RON");
+            amountInRON = amount * exchangeRate;
+        }
+        if (planType.equals("standard")) {
+            return amount * 0.002;
+        } else if(planType.equals("silver")){
+            if(amountInRON >= 500) {
+                return amount * 0.001;
+            }
+        }
+        return 0;
+
+    }
+
+    /**
+     * Add a transaction to the observers
+     * @param transaction transaction to be added
+     * @param user user to be added
+     * @param account account to be added
+     */
     private static void addTransactionToObservers(final Transactions transaction,
                                                   final User user, final Account account) {
         transaction.registerObserver(user);
@@ -51,6 +72,8 @@ public final class AccountOperations {
         String currency = command.getCurrency();
         String accountType = command.getAccountType();
         double interestRate = command.getInterestRate();
+        if(accountType.equals("business"))
+            return;
         Account account = AccountFactory.createAccount(email, currency, accountType, interestRate);
         for (User user : users) {
             if (user.getEmail().equals(email)) {
@@ -163,6 +186,9 @@ public final class AccountOperations {
                                  final HashMap<String, User> usersAccountMap,
                                  final HashMap<String, User> usersCardsMap,
                                  final ArrayList<Commerciant> commerciants) {
+        if(command.getAmount() <= 0) {
+            return;
+        }
         double convertedAmount;
         String cardNumber = command.getCardNumber();
         double amount = command.getAmount();
@@ -197,16 +223,25 @@ public final class AccountOperations {
         String fromCurrency = command.getCurrency();
 
         if (fromCurrency.equals(toCurrency)) {
-            if (account.getBalance() - amount < 0) {
+            double commission = checkForCommission(account, amount, user.getPlan(),
+                    exchangeRates);
+            if (account.getBalance() - (amount + commission) < 0) {
                 Transactions transaction = new TransactionAction(command.getTimestamp(),
                         "Insufficient funds");
                 addTransactionToObservers(transaction, user, account);
                 return;
             }
+            if(amount >= 300 && user.getPlan().equals("silver")) {
+                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
+                if(user.getNrOfPaymentsForUpgrade() == 5) {
+                    user.setPlan("gold");
+                }
+            }
             account.pay(amount);
             CashbackOperations.getCashback(account,
                     CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants),
                     amount, user, exchangeRates);
+            account.pay(commission);
             Transactions transaction = new TransactionPayment(command.getTimestamp(),
                     "Card payment", amount,
                     command.getCommerciant());
@@ -215,15 +250,24 @@ public final class AccountOperations {
             double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
                     fromCurrency, toCurrency);
             convertedAmount = amount * exchangeRate;
-            if (account.getBalance() - convertedAmount < 0) {
+            double commission = checkForCommission(account, convertedAmount, user.getPlan(),
+                    exchangeRates);
+            if (account.getBalance() - (convertedAmount + commission) < 0) {
                 Transactions transaction = new TransactionAction(command.getTimestamp(),
                         "Insufficient funds");
                 addTransactionToObservers(transaction, user, account);
                 return;
             }
+            if(convertedAmount >= 300 && user.getPlan().equals("silver")) {
+                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
+                if(user.getNrOfPaymentsForUpgrade() == 5) {
+                    user.setPlan("gold");
+                }
+            }
             account.pay(convertedAmount);
             CashbackOperations.getCashback(account, CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants), convertedAmount, user,
                     exchangeRates);
+            account.pay(commission);
             Transactions transaction = new TransactionPayment(command.getTimestamp(),
                     "Card payment", convertedAmount,
                     command.getCommerciant());
@@ -280,12 +324,36 @@ public final class AccountOperations {
                                     HashMap<String, Double>> exchangeRates,
                                  final HashMap<String, Account> accountMap,
                                  final HashMap<String, User> usersAccountMap,
-                                 final HashMap<String, Account> aliasAccountMap) {
+                                 final HashMap<String, Account> aliasAccountMap,
+                                 final ArrayNode output) {
         String from = command.getAccount();
         String to = command.getReceiver();
         double amount = command.getAmount();
         User userSender = usersAccountMap.get(from);
+        ObjectMapper mapper = new ObjectMapper();
+        if (userSender == null) {
+            ObjectNode error = mapper.createObjectNode();
+            error.put("command", command.getCommand());
+            ObjectNode outNode = mapper.createObjectNode();
+            outNode.put("timestamp", command.getTimestamp());
+            outNode.put("description", "User not found");
+            error.set("output", outNode);
+            error.put("timestamp", command.getTimestamp());
+            output.add(error);
+            return;
+        }
         User userReceiver = usersAccountMap.get(to);
+        if (userReceiver == null) {
+            ObjectNode error = mapper.createObjectNode();
+            error.put("command", command.getCommand());
+            ObjectNode outNode = mapper.createObjectNode();
+            outNode.put("timestamp", command.getTimestamp());
+            outNode.put("description", "User not found");
+            error.set("output", outNode);
+            error.put("timestamp", command.getTimestamp());
+            output.add(error);
+            return;
+        }
         Account toAccount;
         Account fromAccount;
         if (!accountMap.containsKey(from) || !accountMap.containsKey(to)) {
@@ -309,13 +377,16 @@ public final class AccountOperations {
         } else {
             fromAccount = aliasAccountMap.get(from);
         }
-        if (fromAccount.getBalance() - amount < 0) {
+        double commissionSender = checkForCommission(fromAccount, amount, userSender.getPlan(),
+                exchangeRates);
+        if (fromAccount.getBalance() - (amount + commissionSender) < 0) {
             Transactions transaction = new TransactionAction(command.getTimestamp(),
                     "Insufficient funds");
             addTransactionToObservers(transaction, userSender, fromAccount);
             return;
         }
         fromAccount.pay(amount);
+        fromAccount.pay(commissionSender);
         String fromCurrency = fromAccount.getCurrency();
         String toCurrency = toAccount.getCurrency();
         double convertedAmount = 0;
@@ -518,7 +589,8 @@ public final class AccountOperations {
      * @param output output array
      */
     public static void addInterest(final HashMap<String, Account> accountMap,
-                                   final CommandInput command, final ArrayNode output) {
+                                   final CommandInput command, final ArrayNode output,
+                                   final HashMap<String, User> usersAccountMap) {
         String iban = command.getAccount();
         if (!accountMap.containsKey(iban)) {
             return;
@@ -537,6 +609,11 @@ public final class AccountOperations {
             return;
         }
         AccountSavings savingsAccount = (AccountSavings) account;
-        savingsAccount.setBalance(savingsAccount.getBalance() + savingsAccount.getInterestRate());
+        double interest = savingsAccount.getInterestRate() * savingsAccount.getBalance();
+        savingsAccount.setBalance(savingsAccount.getBalance() + interest);
+        Transactions transaction = new TransactionInterestRate(command.getTimestamp(),
+                "Interest rate income", interest, savingsAccount.getCurrency());
+        User user = usersAccountMap.get(iban);
+        addTransactionToObservers(transaction, user, account);
     }
 }

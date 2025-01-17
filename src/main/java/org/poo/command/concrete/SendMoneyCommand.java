@@ -19,6 +19,6 @@ public class SendMoneyCommand extends BaseCommand {
     @Override
     public void execute() {
         AccountOperations.sendMoney(command, exchangeRates, accountMap,
-                usersAccountsMap, aliasAccountMap);
+                usersAccountsMap, aliasAccountMap, output);
     }
 }

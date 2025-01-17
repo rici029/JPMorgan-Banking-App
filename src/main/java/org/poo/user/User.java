@@ -21,6 +21,7 @@ public class User implements TransactionObserver {
     private String occupation;
     private int age;
     private String plan;
+    private int nrOfPaymentsForUpgrade;
 
     public User(final String firstName, final String lastName, final String email,
                 final String birthDate, final String occupation, final int age) {
@@ -37,6 +38,7 @@ public class User implements TransactionObserver {
         } else {
             this.plan = "standard";
         }
+        this.nrOfPaymentsForUpgrade = 0;
     }
 
     /**

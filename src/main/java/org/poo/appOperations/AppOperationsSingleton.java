@@ -86,7 +86,9 @@ public final class AppOperationsSingleton {
                     ),
                     commerciants
             );
-            command.execute();
+            if(command != null) {
+                command.execute();
+            }
         }
     }
 
