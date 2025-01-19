@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 
 @Getter @Setter
 public class BusinessAccount extends Account {
+    private static final int SPENDING_LIMIT = 500;
     private double spendingLimit;
     private double depositLimit;
     private LinkedHashMap<String, BusinessUser> managers;
@@ -20,8 +21,10 @@ public class BusinessAccount extends Account {
     public BusinessAccount(final String email, final String currency, final String accountType,
                            final HashMap<String, HashMap<String, Double>> exchangeRates) {
         super(email, currency, accountType);
-        this.spendingLimit = 500 * ExchangeOperations.getExchangeRate(exchangeRates, "RON", currency);
-        this.depositLimit = 500 * ExchangeOperations.getExchangeRate(exchangeRates, "RON", currency);
+        this.spendingLimit = SPENDING_LIMIT * ExchangeOperations.getExchangeRate(exchangeRates,
+                "RON", currency);
+        this.depositLimit = SPENDING_LIMIT * ExchangeOperations.getExchangeRate(exchangeRates,
+                "RON", currency);
         this.managers = new LinkedHashMap<>();
         this.employees = new LinkedHashMap<>();
         this.commerciants = new ArrayList<>();

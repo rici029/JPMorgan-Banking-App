@@ -7,7 +7,6 @@ import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class PayOnlineCommand extends BaseCommand {
 

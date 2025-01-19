@@ -39,10 +39,9 @@ public class SplitPayment {
      * @param accountMap account map
      * @param usersAccountMap users account map
      */
-    public void startPayment(HashMap<String, HashMap<String, Double>> exchangeRates,
-                             HashMap<String, Account> accountMap, HashMap<String, User> usersAccountMap) {
-        List<String> accounts = this.getAccounts();
-        double amount = this.getAmount();
+    public void startPayment(final HashMap<String, HashMap<String, Double>> exchangeRates,
+                             final HashMap<String, Account> accountMap,
+                             final HashMap<String, User> usersAccountMap) {
         double amountPerAccount = amount / accounts.size();
         String errorIBAN = null;
 
@@ -61,15 +60,15 @@ public class SplitPayment {
                 }
             }
         }
-        if(errorIBAN != null) {
+        if (errorIBAN != null) {
             Account errorAccount = accountMap.get(errorIBAN);
-            errorSplitPayment(accounts, errorAccount, usersAccountMap,
+            errorSplitPayment(errorAccount, usersAccountMap,
                     amountPerAccount, accountMap);
             return;
         }
 
-        for(String iban : accounts) {
-            payBill(accountMap.get(iban), amountPerAccount, currency, exchangeRates);
+        for (String iban : accounts) {
+            payBill(accountMap.get(iban), amountPerAccount, exchangeRates);
             addSplitTransaction(amountPerAccount, usersAccountMap.get(iban), accountMap.get(iban));
         }
     }
@@ -77,42 +76,40 @@ public class SplitPayment {
     /**
      *
      * @param account account that pays the bill
-     * @param amount amount to be paid
-     * @param currency currency of the amount
+     * @param amountPerAccount amountPerAccount to be paid
      * @param exchangeRates exchange rates
      */
-    private void payBill(final Account account, final double amount, final String currency,
-                               final HashMap<String, HashMap<String, Double>> exchangeRates) {
+    private void payBill(final Account account, final double amountPerAccount,
+                         final HashMap<String, HashMap<String, Double>> exchangeRates) {
         if (account.getCurrency().equals(currency)) {
-            account.pay(amount);
+            account.pay(amountPerAccount);
         } else {
             double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
                     currency, account.getCurrency());
             if (exchangeRate == -1) {
                 return;
             }
-            double convertedAmount = amount * exchangeRate;
+            double convertedAmount = amountPerAccount * exchangeRate;
             account.pay(convertedAmount);
         }
     }
 
     /**
      *
-     * @param accounts list of accounts to split the payment
      * @param errorAccount account that has insufficient funds
      * @param usersAccountMap map of users and their accounts
      * @param amountPerAccount amount per account
      * @param accountMap map of accounts
      */
-    private void errorSplitPayment(final List<String> accounts, final Account errorAccount,
+    private void errorSplitPayment(final Account errorAccount,
                                          final HashMap<String, User> usersAccountMap,
                                          final double amountPerAccount,
                                          final HashMap<String, Account> accountMap) {
         for (String iban : accounts) {
             Account account = accountMap.get(iban);
             String description = String.format("Split payment of %.2f %s", amount, currency);
-            String error = "Account " + errorAccount.getIban() +
-                    " has insufficient funds for a split payment.";
+            String error = "Account " + errorAccount.getIban()
+                    + " has insufficient funds for a split payment.";
             Transactions transaction = new TransactionErrorSplitPayment(description,
                     timestamp, amountPerAccount, currency,
                     accounts, error, type);
@@ -145,7 +142,7 @@ public class SplitPayment {
      */
     public void rejected(final HashMap<String, Account> accountMap,
                          final HashMap<String, User> usersAccountMap) {
-        for(String iban : accounts) {
+        for (String iban : accounts) {
             Account account = accountMap.get(iban);
             String description = String.format("Split payment of %.2f %s", amount, currency);
             Transactions transaction = new TransactionErrorSplitPayment(description,

@@ -18,6 +18,11 @@ public class TransactionUpdatePlan extends Transactions {
         this.newPlanType = newPlanType;
     }
 
+    /**
+     * Method that prints the json object for the update plan transaction.
+     * @param mapper object mapper for creating json objects
+     * @return
+     */
     public ObjectNode printJson(final ObjectMapper mapper) {
         ObjectNode newUpdatePlanNode = mapper.createObjectNode();
         newUpdatePlanNode.put("accountIBAN", getAccount());

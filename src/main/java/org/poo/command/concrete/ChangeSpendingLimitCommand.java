@@ -16,7 +16,9 @@ import java.util.HashMap;
 @Getter @Setter
 public class ChangeSpendingLimitCommand extends BaseCommand {
     private HashMap<String, User> usersMap;
-    public ChangeSpendingLimitCommand(CommandInput command, AppContext context, HashMap<String, User> usersMap) {
+    public ChangeSpendingLimitCommand(final CommandInput command,
+                                      final AppContext context,
+                                      final HashMap<String, User> usersMap) {
         super(command, context.getOutput(), context.getExchangeRates(),
                 context.getUsers(), context.getUsersAccountsMap(),
                 context.getUsersCardsMap(), context.getCardAccountMap(),
@@ -24,6 +26,9 @@ public class ChangeSpendingLimitCommand extends BaseCommand {
         this.usersMap = usersMap;
     }
 
+    /**
+     * Method that executes the change spending limit command.
+     */
     public void execute() {
         String userEmail = command.getEmail();
         String accountIban = command.getAccount();
@@ -40,7 +45,7 @@ public class ChangeSpendingLimitCommand extends BaseCommand {
             return;
         }
         Account account = accountMap.get(accountIban);
-        if(!account.getAccountType().equals("business")) {
+        if (!account.getAccountType().equals("business")) {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "changeSpendingLimit");
@@ -53,7 +58,7 @@ public class ChangeSpendingLimitCommand extends BaseCommand {
             return;
         }
         BusinessAccount businessAccount = (BusinessAccount) account;
-        if(businessAccount.getEmail().equals(userEmail)) {
+        if (businessAccount.getEmail().equals(userEmail)) {
             businessAccount.setSpendingLimit(command.getAmount());
         } else {
             ObjectMapper mapper = new ObjectMapper();

@@ -1,6 +1,5 @@
 package org.poo.command.concrete;
 
-import org.poo.appOperations.AccountOperations;
 import org.poo.command.AppContext;
 import org.poo.command.BaseCommand;
 import org.poo.fileio.CommandInput;
@@ -10,14 +9,14 @@ import org.poo.splitPayment.SplitPayment;
 import java.util.ArrayList;
 
 public class SplitPaymentCommand extends BaseCommand {
-    ArrayList<SplitPayment> splitPayments;
+    private ArrayList<SplitPayment> splitPayments;
     public SplitPaymentCommand(final CommandInput command, final AppContext context,
-                               final ArrayList<SplitPayment> SplitPayments) {
+                               final ArrayList<SplitPayment> splitPayments) {
         super(command, context.getOutput(), context.getExchangeRates(),
               context.getUsers(), context.getUsersAccountsMap(),
               context.getUsersCardsMap(), context.getCardAccountMap(),
               context.getAccountMap(), context.getAliasAccountMap());
-        this.splitPayments = SplitPayments;
+        this.splitPayments = splitPayments;
     }
 
     /**
@@ -26,13 +25,14 @@ public class SplitPaymentCommand extends BaseCommand {
     @Override
     public void execute() {
         String type = command.getSplitPaymentType();
-        if(type.equals("equal")) {
-            SplitPayment splitPayment = new SplitPayment(command.getAccounts(), command.getAmount(),
-                    type, command.getTimestamp(), command.getCurrency());
+        if (type.equals("equal")) {
+            SplitPayment splitPayment = new SplitPayment(command.getAccounts(),
+                    command.getAmount(), type, command.getTimestamp(), command.getCurrency());
             splitPayments.add(splitPayment);
         } else {
-            SplitPayment splitPayment = new CustomSplitPayment(command.getAccounts(), command.getAmount(),
-                    type, command.getTimestamp(), command.getCurrency(), command.getAmountForUsers());
+            SplitPayment splitPayment = new CustomSplitPayment(command.getAccounts(),
+                    command.getAmount(), type, command.getTimestamp(), command.getCurrency(),
+                    command.getAmountForUsers());
             splitPayments.add(splitPayment);
         }
     }

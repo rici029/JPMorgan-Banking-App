@@ -18,7 +18,9 @@ import java.util.LinkedHashMap;
 public class AddNewBusinessAssociateCommand extends BaseCommand {
     private HashMap<String, User> usersMap;
 
-    public AddNewBusinessAssociateCommand(CommandInput commandInput, AppContext context, HashMap<String, User> usersMap) {
+    public AddNewBusinessAssociateCommand(final CommandInput commandInput,
+                                          final AppContext context,
+                                          final HashMap<String, User> usersMap) {
         super(commandInput, context.getOutput(), context.getExchangeRates(),
                 context.getUsers(), context.getUsersAccountsMap(),
                 context.getUsersCardsMap(), context.getCardAccountMap(),
@@ -26,6 +28,9 @@ public class AddNewBusinessAssociateCommand extends BaseCommand {
         this.usersMap = usersMap;
     }
 
+    /**
+     * Method that executes the addNewBusinessAssociate command.
+     */
     public void execute() {
         String userEmail = command.getEmail();
         String accountIban = command.getAccount();
@@ -48,9 +53,10 @@ public class AddNewBusinessAssociateCommand extends BaseCommand {
                 user.getEmail(), role);
         LinkedHashMap<String, BusinessUser> managers = businessAccount.getManagers();
         LinkedHashMap<String, BusinessUser> employees = businessAccount.getEmployees();
-        if(businessAccount.getEmail().equals(command.getEmail()))
+        if (businessAccount.getEmail().equals(command.getEmail())) {
             return;
-        if(managers.containsKey(userEmail) || employees.containsKey(userEmail)) {
+        }
+        if (managers.containsKey(userEmail) || employees.containsKey(userEmail)) {
             return;
         }
         if (role.equals("manager")) {

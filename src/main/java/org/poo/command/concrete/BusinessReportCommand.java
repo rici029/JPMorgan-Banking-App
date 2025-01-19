@@ -27,13 +27,16 @@ public class BusinessReportCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-        if(command.getType().equals("transaction")) {
+        if (command.getType().equals("transaction")) {
             businessReportTransaction();
         } else {
             businessReportCommerciants();
         }
     }
 
+    /**
+     * Create the report for the transaction type
+     */
     private void businessReportTransaction() {
         ObjectMapper mapper = new ObjectMapper();
         double totalSpent = 0;
@@ -56,11 +59,13 @@ public class BusinessReportCommand extends BaseCommand {
             double spent = 0;
             double deposited = 0;
             for (int i = startTimestamp; i <= endTimestamp; i++) {
-                if (manager.getSpent().containsKey(i))
+                if (manager.getSpent().containsKey(i)) {
                     spent += manager.getSpent().get(i);
+                }
 
-                if (manager.getDeposited().containsKey(i))
+                if (manager.getDeposited().containsKey(i)) {
                     deposited += manager.getDeposited().get(i);
+                }
             }
             totalSpent += spent;
             toatalDeposited += deposited;
@@ -73,11 +78,13 @@ public class BusinessReportCommand extends BaseCommand {
             double spent = 0;
             double deposited = 0;
             for (int i = startTimestamp; i <= endTimestamp; i++) {
-                if (employee.getSpent().containsKey(i))
+                if (employee.getSpent().containsKey(i)) {
                     spent += employee.getSpent().get(i);
+                }
 
-                if (employee.getDeposited().containsKey(i))
+                if (employee.getDeposited().containsKey(i)) {
                     deposited += employee.getDeposited().get(i);
+                }
             }
             totalSpent += spent;
             toatalDeposited += deposited;
@@ -92,6 +99,9 @@ public class BusinessReportCommand extends BaseCommand {
 
     }
 
+    /**
+     * Create the report for the commerciants type
+     */
     private void businessReportCommerciants() {
         ObjectMapper mapper = new ObjectMapper();
         int startTimestamp = command.getStartTimestamp();
@@ -111,38 +121,40 @@ public class BusinessReportCommand extends BaseCommand {
         Collections.sort(commerciants);
         for (String commerciant : commerciants) {
             double spent = 0;
-            ArrayList<String> ManagersUsernames = new ArrayList<>();
+            ArrayList<String> managersUsernames = new ArrayList<>();
             for (BusinessUser manager : account.getManagers().values()) {
-                for(Map.Entry<Integer, String> entry : manager.getToCommerciantsSpendingList().entrySet()) {
-                    if(entry.getValue().equals(commerciant) && entry.getKey() >= startTimestamp
+                for (Map.Entry<Integer, String> entry
+                        : manager.getToCommerciantsSpendingList().entrySet()) {
+                    if (entry.getValue().equals(commerciant) && entry.getKey() >= startTimestamp
                             && entry.getKey() <= endTimestamp) {
                         spent += manager.getSpent().get(entry.getKey());
-                        ManagersUsernames.add(manager.getName());
+                        managersUsernames.add(manager.getName());
                     }
                 }
             }
-            ArrayList<String> EmployeesUsernames = new ArrayList<>();
+            ArrayList<String> employeesUsernames = new ArrayList<>();
             for (BusinessUser employee : account.getEmployees().values()) {
-                for(Map.Entry<Integer, String> entry : employee.getToCommerciantsSpendingList().entrySet()) {
-                    if(entry.getValue().equals(commerciant) && entry.getKey() >= startTimestamp
+                for (Map.Entry<Integer, String> entry
+                        : employee.getToCommerciantsSpendingList().entrySet()) {
+                    if (entry.getValue().equals(commerciant) && entry.getKey() >= startTimestamp
                             && entry.getKey() <= endTimestamp) {
                         spent += employee.getSpent().get(entry.getKey());
-                        EmployeesUsernames.add(employee.getName());
+                        employeesUsernames.add(employee.getName());
                     }
                 }
             }
             ObjectNode commerciantNode = mapper.createObjectNode();
             commerciantNode.put("commerciant", commerciant);
             commerciantNode.put("total received", spent);
-            Collections.sort(ManagersUsernames);
+            Collections.sort(managersUsernames);
             ArrayNode managersNode = mapper.createArrayNode();
-            for (String manager : ManagersUsernames) {
+            for (String manager : managersUsernames) {
                 managersNode.add(manager);
             }
             commerciantNode.set("managers", managersNode);
-            Collections.sort(EmployeesUsernames);
+            Collections.sort(employeesUsernames);
             ArrayNode employeesNode = mapper.createArrayNode();
-            for (String employee : EmployeesUsernames) {
+            for (String employee : employeesUsernames) {
                 employeesNode.add(employee);
             }
             commerciantNode.set("employees", employeesNode);

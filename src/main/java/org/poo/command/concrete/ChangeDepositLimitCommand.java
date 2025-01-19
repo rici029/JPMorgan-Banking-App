@@ -16,8 +16,9 @@ import java.util.HashMap;
 @Getter @Setter
 public class ChangeDepositLimitCommand extends BaseCommand {
     private HashMap<String, User> usersMap;
-    public ChangeDepositLimitCommand(CommandInput command, AppContext context,
-                                     HashMap<String, User> usersMap) {
+    public ChangeDepositLimitCommand(final CommandInput command,
+                                     final AppContext context,
+                                     final HashMap<String, User> usersMap) {
         super(command, context.getOutput(), context.getExchangeRates(),
                 context.getUsers(), context.getUsersAccountsMap(),
                 context.getUsersCardsMap(), context.getCardAccountMap(),
@@ -25,6 +26,9 @@ public class ChangeDepositLimitCommand extends BaseCommand {
         this.usersMap = usersMap;
     }
 
+    /**
+     * Method that executes the change deposit limit command.
+     */
     public void execute() {
         String userEmail = command.getEmail();
         String accountIban = command.getAccount();
@@ -41,10 +45,11 @@ public class ChangeDepositLimitCommand extends BaseCommand {
             return;
         }
         Account account = accountMap.get(accountIban);
-        if(!account.getAccountType().equals("business"))
+        if (!account.getAccountType().equals("business")) {
             return;
+        }
         BusinessAccount businessAccount = (BusinessAccount) account;
-        if(businessAccount.getEmail().equals(userEmail)) {
+        if (businessAccount.getEmail().equals(userEmail)) {
             businessAccount.setDepositLimit((command.getAmount()));
         } else {
             ObjectMapper mapper = new ObjectMapper();

@@ -17,16 +17,19 @@ public class RejectSplitPaymentCommand extends BaseCommand {
     private HashMap<String, User> usersMap;
 
     public RejectSplitPaymentCommand(final CommandInput command, final AppContext context,
-                                     final ArrayList<SplitPayment> SplitPayments,
+                                     final ArrayList<SplitPayment> splitPayments,
                                      final HashMap<String, User> usersMap) {
         super(command, context.getOutput(), context.getExchangeRates(),
               context.getUsers(), context.getUsersAccountsMap(),
               context.getUsersCardsMap(), context.getCardAccountMap(),
               context.getAccountMap(), context.getAliasAccountMap());
-        this.splitPayments = SplitPayments;
+        this.splitPayments = splitPayments;
         this.usersMap = usersMap;
     }
 
+    /**
+     * Method that executes the rejectSplitPayment command.
+     */
     public void execute() {
         String userEmail = command.getEmail();
         String type = command.getSplitPaymentType();
@@ -44,17 +47,18 @@ public class RejectSplitPaymentCommand extends BaseCommand {
         }
         ArrayList<Account> accounts = usersMap.get(userEmail).getAccounts();
         SplitPayment splitPaymentNeeded = null;
-        for(SplitPayment splitPayment : splitPayments) {
-            for(Account account : accounts) {
-                if(splitPayment.getAccounts().contains(account.getIban())
+        for (SplitPayment splitPayment : splitPayments) {
+            for (Account account : accounts) {
+                if (splitPayment.getAccounts().contains(account.getIban())
                         && splitPayment.getType().equals(type)) {
                     splitPaymentNeeded = splitPayment;
                     break;
                 }
             }
         }
-        if(splitPaymentNeeded == null)
+        if (splitPaymentNeeded == null) {
             return;
+        }
         splitPayments.remove(splitPaymentNeeded);
         splitPaymentNeeded.rejected(accountMap, usersAccountsMap);
     }

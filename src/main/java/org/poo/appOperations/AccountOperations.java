@@ -7,10 +7,15 @@ import org.poo.account.AccountSavings;
 import org.poo.account.BusinessAccount;
 import org.poo.businessUser.BusinessUser;
 import org.poo.card.Card;
-import org.poo.command.concrete.CashWithdrawalCommand;
 import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
-import org.poo.transactions.*;
+import org.poo.transactions.TransactionAction;
+import org.poo.transactions.TransactionInterestRate;
+import org.poo.transactions.TransactionPayment;
+import org.poo.transactions.TransactionTransfer;
+import org.poo.transactions.TransactionUpdatePlan;
+import org.poo.transactions.Transactions;
+import org.poo.transactions.TransactionCard;
 import org.poo.user.User;
 import org.poo.account.Account;
 import org.poo.account.AccountFactory;
@@ -19,14 +24,25 @@ import org.poo.commerciant.CommerciantOperation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 
 public final class AccountOperations {
     private AccountOperations() {
         //not called
     }
-
+    private static final double COMMISION_STANDARD = 0.002;
+    private static final double COMMISION_SILVER = 0.001;
+    private static final int MAXIMUM_PAYMENTS_FOR_UPGRADE = 5;
+    private static final int LIMIT_FOR_SILVER = 500;
+    private static final int LIMIT_FOR_UPGRADE = 300;
+    /**
+     * Check for commission
+     * @param account account to be checked
+     * @param amount amount to be checked
+     * @param planType plan type
+     * @param exchangeRates exchange rates
+     * @return the commission
+     */
     public static double checkForCommission(final Account account, final double amount,
                                              final String planType,
                                              final HashMap<String,
@@ -38,10 +54,10 @@ public final class AccountOperations {
             amountInRON = amount * exchangeRate;
         }
         if (planType.equals("standard")) {
-            return amount * 0.002;
-        } else if(planType.equals("silver")){
-            if(amountInRON >= 500) {
-                return amount * 0.001;
+            return amount * COMMISION_STANDARD;
+        } else if (planType.equals("silver")) {
+            if (amountInRON >= LIMIT_FOR_SILVER) {
+                return amount * COMMISION_SILVER;
             }
         }
         return 0;
@@ -76,7 +92,8 @@ public final class AccountOperations {
         String currency = command.getCurrency();
         String accountType = command.getAccountType();
         double interestRate = command.getInterestRate();
-        Account account = AccountFactory.createAccount(email, currency, accountType, interestRate, exchangeRates);
+        Account account = AccountFactory.createAccount(email, currency, accountType,
+                interestRate, exchangeRates);
         for (User user : users) {
             if (user.getEmail().equals(email)) {
                 user.addAccount(account);
@@ -96,27 +113,31 @@ public final class AccountOperations {
      * @param command command input
      */
     public static void addFunds(final HashMap<String, User> usersAccountsMap,
-                                final CommandInput command, final HashMap<String, Account> accountMap) {
+                                final CommandInput command,
+                                final HashMap<String, Account> accountMap) {
         String iban = command.getAccount();
         double amount = command.getAmount();
         if (!usersAccountsMap.containsKey(iban)) {
             return;
         }
         Account account = accountMap.get(iban);
-        if(account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())) {
+        if (account.getAccountType().equals("business")
+                && !account.getEmail().equals(command.getEmail())) {
             BusinessAccount businessAccount = (BusinessAccount) account;
             BusinessUser businessUser = null;
-            if(businessAccount.getManagers().containsKey(command.getEmail())) {
+            if (businessAccount.getManagers().containsKey(command.getEmail())) {
                 businessUser = businessAccount.getManagers().get(command.getEmail());
-            } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+            } else if (businessAccount.getEmployees().containsKey(command.getEmail())) {
                 businessUser = businessAccount.getEmployees().get(command.getEmail());
             }
-            if(businessUser == null) {
+            if (businessUser == null) {
                 return;
             }
-            if(businessUser.getRole().equals("employee")) {
-                if(businessAccount.getDepositLimit() != 0 && amount > businessAccount.getDepositLimit())
+            if (businessUser.getRole().equals("employee")) {
+                if (businessAccount.getDepositLimit() != 0
+                        && amount > businessAccount.getDepositLimit()) {
                     return;
+                }
             }
             businessUser.getDeposited().put(command.getTimestamp(), amount);
         }
@@ -177,7 +198,7 @@ public final class AccountOperations {
         User user = usersAccountsMap.get(iban);
         for (Account account : user.getAccounts()) {
             if (account.getIban().equals(iban)) {
-                if(!account.getEmail().equals(command.getEmail())) {
+                if (!account.getEmail().equals(command.getEmail())) {
                     return;
                 }
                 account.setMinimumBalance(minimumBalance);
@@ -205,7 +226,6 @@ public final class AccountOperations {
         if (command.getAmount() <= 0) {
             return;
         }
-        double convertedAmount;
         BusinessAccount businessAccount = null;
         String cardNumber = command.getCardNumber();
         double amount = command.getAmount();
@@ -215,26 +235,14 @@ public final class AccountOperations {
         }
         Account account = cardAccountMap.get(cardNumber);
 
-        ObjectMapper mapper = new ObjectMapper();
-        if(!account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())){
-            ObjectNode commandOutput = mapper.createObjectNode();
-            commandOutput.put("command", command.getCommand());
-            ObjectNode objectNode = mapper.createObjectNode();
-            objectNode.put("description", "Card not found");
-            objectNode.put("timestamp", command.getTimestamp());
-            commandOutput.set("output", objectNode);
-            commandOutput.put("timestamp", command.getTimestamp());
-            output.add(commandOutput);
+        if (!account.getAccountType().equals("business")
+                && !account.getEmail().equals(command.getEmail())) {
+            PrintOperations.cardNotFound(output, command);
             return;
         }
         User user = usersAccountMap.get(account.getIban());
-        Card card = null;
-        for (Card c : account.getCards()) {
-            if (c.getCardNumber().equals(cardNumber)) {
-                card = c;
-                break;
-            }
-        }
+        Card card = account.getCards().stream().filter(c ->
+                c.getCardNumber().equals(cardNumber)).findFirst().orElse(null);
 
         if (card == null) {
             PrintOperations.cardNotFound(output, command);
@@ -242,16 +250,17 @@ public final class AccountOperations {
         }
 
 
-        if (!card.getEmail().equals(user.getEmail()) && !account.getAccountType().equals("business")){
+        if (!card.getEmail().equals(user.getEmail())
+                && !account.getAccountType().equals("business")) {
             PrintOperations.cardNotFound(output, command);
             return;
         }
 
         if (account.getAccountType().equals("business")) {
             businessAccount = (BusinessAccount) account;
-            if(!businessAccount.getManagers().containsKey(command.getEmail()) &&
-                    !businessAccount.getEmployees().containsKey(command.getEmail()) &&
-                    !account.getEmail().equals(command.getEmail())) {
+            if (!businessAccount.getManagers().containsKey(command.getEmail())
+                    && !businessAccount.getEmployees().containsKey(command.getEmail())
+                    && !account.getEmail().equals(command.getEmail())) {
                 PrintOperations.cardNotFound(output, command);
                 return;
             }
@@ -264,14 +273,11 @@ public final class AccountOperations {
             return;
         }
 
-
-        if (CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants) == null)
+        if (CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants) == null) {
             return;
-
+        }
         String toCurrency = account.getCurrency();
-
         String fromCurrency = command.getCurrency();
-
         if (fromCurrency.equals(toCurrency)) {
             double commission = checkForCommission(account, amount, user.getPlan(),
                     exchangeRates);
@@ -281,7 +287,8 @@ public final class AccountOperations {
                 addTransactionToObservers(transaction, user, account);
                 return;
             }
-            if (account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())) {
+            if (account.getAccountType().equals("business")
+                    && !account.getEmail().equals(command.getEmail())) {
                 BusinessUser businessUser = null;
                 if (businessAccount.getManagers().containsKey(command.getEmail())) {
                     businessUser = businessAccount.getManagers().get(command.getEmail());
@@ -290,15 +297,17 @@ public final class AccountOperations {
                 }
 
                 if (businessUser.getRole().equals("employee")) {
-                    if(businessAccount.getSpendingLimit() != 0 && amount > businessAccount.getSpendingLimit())
+                    if (businessAccount.getSpendingLimit() != 0
+                            && amount > businessAccount.getSpendingLimit()) {
                         return;
+                    }
                 }
-
                 businessUser.getSpent().put(command.getTimestamp(), amount);
                 HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
                 spendings.put(command.getTimestamp(), command.getCommerciant());
-                if (!businessAccount.getCommerciants().contains(command.getCommerciant()))
+                if (!businessAccount.getCommerciants().contains(command.getCommerciant())) {
                     businessAccount.getCommerciants().add(command.getCommerciant());
+                }
             }
             account.pay(amount);
             CashbackOperations.getCashback(account,
@@ -315,9 +324,9 @@ public final class AccountOperations {
                         account.getCurrency(), "RON");
                 amountInRON = amount * exchangeRateRON;
             }
-            if(amountInRON >= 300 && user.getPlan().equals("silver")) {
+            if (amountInRON >= LIMIT_FOR_UPGRADE && user.getPlan().equals("silver")) {
                 user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
-                if(user.getNrOfPaymentsForUpgrade() == 5) {
+                if (user.getNrOfPaymentsForUpgrade() == MAXIMUM_PAYMENTS_FOR_UPGRADE) {
                     user.setPlan("gold");
                     Transactions transactionUpgrade = new TransactionUpdatePlan(account.getIban(),
                             "gold", "Upgrade plan", command.getTimestamp());
@@ -325,63 +334,110 @@ public final class AccountOperations {
                 }
             }
         } else {
-            double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
-                    fromCurrency, toCurrency);
-            convertedAmount = amount * exchangeRate;
-            double commission = checkForCommission(account, convertedAmount, user.getPlan(),
-                    exchangeRates);
-            if (account.getBalance() - (convertedAmount + commission) < 0) {
-                Transactions transaction = new TransactionAction(command.getTimestamp(),
-                        "Insufficient funds");
-                addTransactionToObservers(transaction, user, account);
+            if (convertedPayment(command, exchangeRates,
+                    commerciants, fromCurrency, toCurrency, amount, account, user)) {
                 return;
-            }
-            if(account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())) {
-                businessAccount = (BusinessAccount) account;
-                BusinessUser businessUser = null;
-                if(businessAccount.getManagers().containsKey(command.getEmail())) {
-                    businessUser = businessAccount.getManagers().get(command.getEmail());
-                } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
-                    businessUser = businessAccount.getEmployees().get(command.getEmail());
-                }
-
-                if(businessUser.getRole().equals("employee")) {
-                    if(businessAccount.getSpendingLimit() != 0 && convertedAmount > businessAccount.getSpendingLimit())
-                        return;
-                }
-                businessUser.getSpent().put(command.getTimestamp(), convertedAmount);
-                HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
-                spendings.put(command.getTimestamp(), command.getCommerciant());
-                if(!businessAccount.getCommerciants().contains(command.getCommerciant()))
-                    businessAccount.getCommerciants().add(command.getCommerciant());
-            }
-            account.pay(convertedAmount);
-            CashbackOperations.getCashback(account, CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants), convertedAmount, user,
-                    exchangeRates);
-            account.pay(commission);
-            Transactions transaction = new TransactionPayment(command.getTimestamp(),
-                    "Card payment", convertedAmount,
-                    command.getCommerciant());
-            addTransactionToObservers(transaction, user, account);
-            double amountInRON = amount;
-            if (!account.getCurrency().equals("RON")) {
-                double exchangeRateRON = ExchangeOperations.getExchangeRate(exchangeRates,
-                        account.getCurrency(), "RON");
-                amountInRON = amount * exchangeRateRON;
-            }
-            if(amountInRON >= 300 && user.getPlan().equals("silver")) {
-                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
-                if(user.getNrOfPaymentsForUpgrade() == 5) {
-                    user.setPlan("gold");
-                    Transactions transactionUpgrade = new TransactionUpdatePlan(account.getIban(),
-                            "gold", "Upgrade plan", command.getTimestamp());
-                    addTransactionToObservers(transactionUpgrade, user, account);
-                }
             }
         }
         if (card.getCardType().equals("onetime")) {
             updateOneTimeCard(command, cardAccountMap, usersCardsMap, cardNumber, card,
                     account, user);
+        }
+    }
+
+    /**
+     * Converted online payment
+     * @param command command input
+     * @param exchangeRates exchange rates
+     * @param commerciants list of commerciants
+     * @param fromCurrency from currency
+     * @param toCurrency to currency
+     * @param amount amount
+     * @param account account
+     * @param user user
+     * @return
+     */
+    private static boolean convertedPayment(final CommandInput command,
+                                            final HashMap<String,
+                                                    HashMap<String, Double>> exchangeRates,
+                                            final ArrayList<Commerciant> commerciants,
+                                            final String fromCurrency,
+                                            final String toCurrency,
+                                            final double amount, final Account account,
+                                            final User user) {
+        BusinessAccount businessAccount;
+        double convertedAmount;
+        double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
+                fromCurrency, toCurrency);
+        convertedAmount = amount * exchangeRate;
+        double commission = checkForCommission(account, convertedAmount, user.getPlan(),
+                exchangeRates);
+        if (account.getBalance() - (convertedAmount + commission) < 0) {
+            Transactions transaction = new TransactionAction(command.getTimestamp(),
+                    "Insufficient funds");
+            addTransactionToObservers(transaction, user, account);
+            return true;
+        }
+        if (account.getAccountType().equals("business")
+                && !account.getEmail().equals(command.getEmail())) {
+            businessAccount = (BusinessAccount) account;
+            BusinessUser businessUser = null;
+            if (businessAccount.getManagers().containsKey(command.getEmail())) {
+                businessUser = businessAccount.getManagers().get(command.getEmail());
+            } else if (businessAccount.getEmployees().containsKey(command.getEmail())) {
+                businessUser = businessAccount.getEmployees().get(command.getEmail());
+            }
+
+            if (businessUser.getRole().equals("employee")) {
+                if (businessAccount.getSpendingLimit() != 0
+                        && convertedAmount > businessAccount.getSpendingLimit()) {
+                    return true;
+                }
+            }
+            businessUser.getSpent().put(command.getTimestamp(), convertedAmount);
+            HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
+            spendings.put(command.getTimestamp(), command.getCommerciant());
+            if (!businessAccount.getCommerciants().contains(command.getCommerciant())) {
+                businessAccount.getCommerciants().add(command.getCommerciant());
+            }
+        }
+        account.pay(convertedAmount);
+        CashbackOperations.getCashback(account,
+                CommerciantOperation.findCommerciant(command.getCommerciant(),
+                        commerciants), convertedAmount, user, exchangeRates);
+        account.pay(commission);
+        Transactions transaction = new TransactionPayment(command.getTimestamp(),
+                "Card payment", convertedAmount,
+                command.getCommerciant());
+        addTransactionToObservers(transaction, user, account);
+        double amountInRON = amount;
+        if (!account.getCurrency().equals("RON")) {
+            double exchangeRateRON = ExchangeOperations.getExchangeRate(exchangeRates,
+                    account.getCurrency(), "RON");
+            amountInRON = amount * exchangeRateRON;
+        }
+        checkForGoldUpgrade(command, amountInRON, user, account);
+        return false;
+    }
+
+    /**
+     * Check for gold upgrade
+     * @param command command input
+     * @param amountInRON amount in RON
+     * @param user user
+     * @param account account
+     */
+    private static void checkForGoldUpgrade(final CommandInput command,
+                                            final double amountInRON, final User user,
+                                            final Account account) {
+        if (amountInRON >= LIMIT_FOR_UPGRADE && user.getPlan().equals("silver")) {
+            user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
+            if (user.getNrOfPaymentsForUpgrade() == MAXIMUM_PAYMENTS_FOR_UPGRADE) {
+                user.setPlan("gold");
+                Transactions transactionUpgrade = new TransactionUpdatePlan(account.getIban(),
+                        "gold", "Upgrade plan", command.getTimestamp());
+                addTransactionToObservers(transactionUpgrade, user, account);
+            }
         }
     }
 
@@ -439,14 +495,7 @@ public final class AccountOperations {
         User userSender = usersMap.get(command.getEmail());
         ObjectMapper mapper = new ObjectMapper();
         if (userSender == null) {
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", command.getCommand());
-            ObjectNode outNode = mapper.createObjectNode();
-            outNode.put("timestamp", command.getTimestamp());
-            outNode.put("description", "User not found");
-            error.set("output", outNode);
-            error.put("timestamp", command.getTimestamp());
-            output.add(error);
+            erroruserNotFoundJson(command, output, mapper);
             return;
         }
 
@@ -454,14 +503,7 @@ public final class AccountOperations {
         Account fromAccount;
         if (!aliasAccountMap.containsKey(from)) {
             if (!accountMap.containsKey(from)) {
-                ObjectNode error = mapper.createObjectNode();
-                error.put("command", command.getCommand());
-                ObjectNode outNode = mapper.createObjectNode();
-                outNode.put("timestamp", command.getTimestamp());
-                outNode.put("description", "User not found");
-                error.set("output", outNode);
-                error.put("timestamp", command.getTimestamp());
-                output.add(error);
+                erroruserNotFoundJson(command, output, mapper);
                 return;
             } else {
                 fromAccount = accountMap.get(from);
@@ -474,14 +516,7 @@ public final class AccountOperations {
         if (commerciant == null) {
             if (!aliasAccountMap.containsKey(to)) {
                 if (!accountMap.containsKey(to)) {
-                    ObjectNode error = mapper.createObjectNode();
-                    error.put("command", command.getCommand());
-                    ObjectNode outNode = mapper.createObjectNode();
-                    outNode.put("timestamp", command.getTimestamp());
-                    outNode.put("description", "User not found");
-                    error.set("output", outNode);
-                    error.put("timestamp", command.getTimestamp());
-                    output.add(error);
+                    erroruserNotFoundJson(command, output, mapper);
                     return;
                 } else {
                     toAccount = accountMap.get(to);
@@ -494,14 +529,7 @@ public final class AccountOperations {
         }
 
         if (userReceiver == null && commerciant == null) {
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", command.getCommand());
-            ObjectNode outNode = mapper.createObjectNode();
-            outNode.put("timestamp", command.getTimestamp());
-            outNode.put("description", "User not found");
-            error.set("output", outNode);
-            error.put("timestamp", command.getTimestamp());
-            output.add(error);
+            erroruserNotFoundJson(command, output, mapper);
             return;
         }
         double commissionSender = checkForCommission(fromAccount, amount, userSender.getPlan(),
@@ -515,41 +543,40 @@ public final class AccountOperations {
 
         BusinessAccount businessAccount = null;
 
-        if(fromAccount.getAccountType().equals("business"))
+        if (fromAccount.getAccountType().equals("business")) {
             businessAccount = (BusinessAccount) fromAccount;
-        if(fromAccount.getAccountType().equals("business") && !fromAccount.getEmail().equals(command.getEmail())) {
+        }
+        if (fromAccount.getAccountType().equals("business")
+                && !fromAccount.getEmail().equals(command.getEmail())) {
             BusinessUser businessUser = null;
-            if(businessAccount.getManagers().containsKey(command.getEmail())) {
+            if (businessAccount.getManagers().containsKey(command.getEmail())) {
                 businessUser = businessAccount.getManagers().get(command.getEmail());
-            } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+            } else if (businessAccount.getEmployees().containsKey(command.getEmail())) {
                 businessUser = businessAccount.getEmployees().get(command.getEmail());
             }
-            if(businessUser == null) {
-                return;
-            }
-            if(businessUser.getRole().equals("employee")) {
-                if(businessAccount.getSpendingLimit() != 0 && amount > businessAccount.getSpendingLimit())
+            if (businessUser.getRole().equals("employee")) {
+                if (businessAccount.getSpendingLimit() != 0
+                        && amount > businessAccount.getSpendingLimit()) {
                     return;
+                }
             }
             businessUser.getSpent().put(command.getTimestamp(), amount);
         }
         fromAccount.pay(amount);
         fromAccount.pay(commissionSender);
-        if(commerciant != null) {
-            if(businessAccount != null && !fromAccount.getEmail().equals(command.getEmail())) {
+        if (commerciant != null) {
+            if (businessAccount != null && !fromAccount.getEmail().equals(command.getEmail())) {
                 BusinessUser businessUser = null;
-                if(businessAccount.getManagers().containsKey(command.getEmail())) {
+                if (businessAccount.getManagers().containsKey(command.getEmail())) {
                     businessUser = businessAccount.getManagers().get(command.getEmail());
-                } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+                } else if (businessAccount.getEmployees().containsKey(command.getEmail())) {
                     businessUser = businessAccount.getEmployees().get(command.getEmail());
-                }
-                if(businessUser == null) {
-                    return;
                 }
                 HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
                 spendings.put(command.getTimestamp(), commerciant.getName());
-                if(!businessAccount.getCommerciants().contains(commerciant.getName()))
+                if (!businessAccount.getCommerciants().contains(commerciant.getName())) {
                     businessAccount.getCommerciants().add(commerciant.getName());
+                }
             }
             CashbackOperations.getCashback(fromAccount, commerciant, amount, userSender,
                     exchangeRates);
@@ -585,6 +612,24 @@ public final class AccountOperations {
         Transactions transactionReceiver = new TransactionTransfer(command.getTimestamp(),
                 from, to, amountString, command.getDescription(), "received");
         addTransactionToObservers(transactionReceiver, userReceiver, toAccount);
+    }
+
+    /**
+     * Error user not found json
+     * @param command command input
+     * @param output output array
+     * @param mapper object mapper
+     */
+    private static void erroruserNotFoundJson(final CommandInput command,
+                                              final ArrayNode output, final ObjectMapper mapper) {
+        ObjectNode error = mapper.createObjectNode();
+        error.put("command", command.getCommand());
+        ObjectNode outNode = mapper.createObjectNode();
+        outNode.put("timestamp", command.getTimestamp());
+        outNode.put("description", "User not found");
+        error.set("output", outNode);
+        error.put("timestamp", command.getTimestamp());
+        output.add(error);
     }
 
     /**

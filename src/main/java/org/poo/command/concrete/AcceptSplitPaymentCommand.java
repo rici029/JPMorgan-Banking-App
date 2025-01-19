@@ -19,20 +19,23 @@ public class AcceptSplitPaymentCommand extends BaseCommand {
     private ArrayList<SplitPayment> splitPayments;
     private HashMap<String, User> usersMap;
     public AcceptSplitPaymentCommand(final CommandInput command, final AppContext context,
-                                     final ArrayList<SplitPayment> SplitPayments,
+                                     final ArrayList<SplitPayment> splitPayments,
                                      final HashMap<String, User> usersMap) {
         super(command, context.getOutput(), context.getExchangeRates(),
               context.getUsers(), context.getUsersAccountsMap(),
               context.getUsersCardsMap(), context.getCardAccountMap(),
               context.getAccountMap(), context.getAliasAccountMap());
-        this.splitPayments = SplitPayments;
+        this.splitPayments = splitPayments;
         this.usersMap = usersMap;
     }
 
+    /**
+     * Method that executes the acceptSplitPayment command.
+     */
     public void execute() {
         String userEmail = command.getEmail();
         String type = command.getSplitPaymentType();
-        if(!usersMap.containsKey(userEmail)) {
+        if (!usersMap.containsKey(userEmail)) {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "acceptSplitPayment");
@@ -47,9 +50,9 @@ public class AcceptSplitPaymentCommand extends BaseCommand {
         ArrayList<Account> accounts = usersMap.get(userEmail).getAccounts();
         SplitPayment splitPaymentNeeded = null;
         loop:
-        for(SplitPayment splitPayment : splitPayments) {
-            for(Account account : accounts) {
-                if(splitPayment.getAccounts().contains(account.getIban())
+        for (SplitPayment splitPayment : splitPayments) {
+            for (Account account : accounts) {
+                if (splitPayment.getAccounts().contains(account.getIban())
                         && splitPayment.getType().equals(type)) {
                     splitPayment.setNoOfAccepts(splitPayment.getNoOfAccepts() + 1);
                     splitPaymentNeeded = splitPayment;
@@ -57,10 +60,11 @@ public class AcceptSplitPaymentCommand extends BaseCommand {
                 }
             }
         }
-        if(splitPaymentNeeded == null)
+        if (splitPaymentNeeded == null) {
             return;
+        }
 
-        if(splitPaymentNeeded.getNoOfAccepts() == splitPaymentNeeded.getAccounts().size()) {
+        if (splitPaymentNeeded.getNoOfAccepts() == splitPaymentNeeded.getAccounts().size()) {
             splitPaymentNeeded.startPayment(exchangeRates, accountMap, usersAccountsMap);
             splitPayments.remove(splitPaymentNeeded);
         }

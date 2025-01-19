@@ -11,22 +11,27 @@ import org.poo.transactions.Transactions;
 import org.poo.user.User;
 
 public class WithdrawSavingsCommand extends BaseCommand {
-    public WithdrawSavingsCommand(CommandInput command, AppContext context) {
+    private static final int MIN_AGE = 21;
+    public WithdrawSavingsCommand(final CommandInput command,
+                                  final AppContext context) {
         super(command, context.getOutput(), context.getExchangeRates(), context.getUsers(),
-                context.getUsersAccountsMap(), context.getUsersCardsMap(), context.getCardAccountMap(),
+                context.getUsersAccountsMap(), context.getUsersCardsMap(),
+                context.getCardAccountMap(),
                 context.getAccountMap(), context.getAliasAccountMap());
     }
 
+    /**
+     * Method that executes the withdraw savings command.
+     */
     @Override
     public void execute() {
         String iban = command.getAccount();
-        if(!accountMap.containsKey(iban)) {
-            // Account not found
+        if (!accountMap.containsKey(iban)) {
             return;
         }
         Account accountSavings = accountMap.get(iban);
         User user = usersAccountsMap.get(iban);
-        if(user.getAge() < 21) {
+        if (user.getAge() < MIN_AGE) {
             Transactions transaction = new TransactionAction(command.getTimestamp(),
                     "You don't have the minimum age required.");
             transaction.registerObserver(user);
@@ -34,7 +39,7 @@ public class WithdrawSavingsCommand extends BaseCommand {
             transaction.notifyObservers();
             return;
         }
-        if(!accountSavings.getAccountType().equals("savings")){
+        if (!accountSavings.getAccountType().equals("savings")) {
             Transactions transaction = new TransactionAction(command.getTimestamp(),
                     "Account is not of type savings.");
             transaction.registerObserver(user);
@@ -44,14 +49,14 @@ public class WithdrawSavingsCommand extends BaseCommand {
         }
         double amountToWithdraw = command.getAmount();
         String toCurrency = command.getCurrency();
-        if(!accountSavings.getCurrency().equals(toCurrency)) {
+        if (!accountSavings.getCurrency().equals(toCurrency)) {
             double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
                     accountSavings.getCurrency(), toCurrency);
             amountToWithdraw *= exchangeRate;
         }
-        for(Account acc : user.getAccounts()) {
-            if(acc.getCurrency().equals(toCurrency) && acc.getAccountType().equals("classic")) {
-                if(accountSavings.getBalance() < amountToWithdraw) {
+        for (Account acc : user.getAccounts()) {
+            if (acc.getCurrency().equals(toCurrency) && acc.getAccountType().equals("classic")) {
+                if (accountSavings.getBalance() < amountToWithdraw) {
                     Transactions transaction = new TransactionAction(command.getTimestamp(),
                             "Insufficient funds");
                     transaction.registerObserver(user);

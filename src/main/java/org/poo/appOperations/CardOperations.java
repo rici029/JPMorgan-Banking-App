@@ -1,7 +1,5 @@
 package org.poo.appOperations;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.account.Account;
 import org.poo.account.BusinessAccount;
 import org.poo.businessUser.BusinessUser;
@@ -21,6 +19,12 @@ public final class CardOperations {
         //not called
     }
 
+    /**
+     * Add a transaction to the observers
+     * @param transaction transaction
+     * @param user user
+     * @param account account
+     */
     public static void addTransactionToObservers(final Transactions transaction,
                                                   final User user, final Account account) {
         transaction.registerObserver(user);
@@ -51,7 +55,7 @@ public final class CardOperations {
         String iban = command.getAccount();
         User user = usersMap.get(email);
         Account account = accountMap.get(iban);
-        if(user == null) {
+        if (user == null) {
             return;
         }
         Card card = new Card(iban, email, cardType);
@@ -80,22 +84,25 @@ public final class CardOperations {
         Account account = cardAccountMap.get(cardNumber);
         for (Card card : account.getCards()) {
             if (card.getCardNumber().equals(cardNumber)) {
-                if(!usersMap.containsKey(command.getEmail())) {
+                if (!usersMap.containsKey(command.getEmail())) {
                     return;
                 }
                 User user = usersMap.get(command.getEmail());
-                if(account.getAccountType().equals("business")) {
+                if (account.getAccountType().equals("business")) {
                     BusinessAccount businessAccount = (BusinessAccount) account;
                     HashMap<String, BusinessUser> employees = businessAccount.getEmployees();
-                    if(employees.containsKey(user.getEmail()) && !user.getEmail().equals(card.getEmail())) {
+                    if (employees.containsKey(user.getEmail())
+                            && !user.getEmail().equals(card.getEmail())) {
                         return;
                     }
                 }
-                if(!account.getAccountType().equals("business") && !card.getEmail().equals(user.getEmail())) {
+                if (!account.getAccountType().equals("business")
+                        && !card.getEmail().equals(user.getEmail())) {
                     return;
                 }
-                if(account.getBalance() > 0)
+                if (account.getBalance() > 0) {
                     return;
+                }
                 account.removeCard(card);
                 cardAccountMap.remove(cardNumber);
                 Transactions transaction = new TransactionCard(card.getCardNumber(),

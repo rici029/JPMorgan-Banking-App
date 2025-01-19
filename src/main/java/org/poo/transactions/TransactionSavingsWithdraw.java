@@ -20,7 +20,12 @@ public class TransactionSavingsWithdraw extends Transactions {
         this.classicIban = classicIban;
     }
 
-    public ObjectNode printJson(ObjectMapper mapper) {
+    /**
+     * Method that prints the transaction in json format.
+     * @param mapper object mapper for creating json objects
+     * @return the json object
+     */
+    public ObjectNode printJson(final ObjectMapper mapper) {
         ObjectNode transactionNode = mapper.createObjectNode();
         transactionNode.put("amount", getAmount());
         transactionNode.put("savingsAccountIBAN", getSavingsIban());

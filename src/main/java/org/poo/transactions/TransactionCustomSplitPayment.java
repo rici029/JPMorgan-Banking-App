@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Getter @Setter
@@ -18,7 +17,8 @@ public class TransactionCustomSplitPayment extends Transactions {
 
     public TransactionCustomSplitPayment(final String description, final int timestamp,
                                          final List<Double> amountForUsers, final String currency,
-                                         final List<String> accounts, final String splitPaymentType) {
+                                         final List<String> accounts,
+                                         final String splitPaymentType) {
         super(description, timestamp);
         this.amountForUsers = amountForUsers;
         this.currency = currency;

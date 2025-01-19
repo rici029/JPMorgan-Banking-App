@@ -17,7 +17,8 @@ public final class AccountFactory {
      */
     public static Account createAccount(final String email, final String currency,
                                         final String accountType, final double interestRate,
-                                        final HashMap<String, HashMap<String, Double>> exchangeRates) {
+                                        final HashMap<String,
+                                                HashMap<String, Double>> exchangeRates) {
         switch (accountType) {
             case "classic":
                 return new AccountClassic(email, currency, accountType);

@@ -13,6 +13,10 @@ import org.poo.transactions.Transactions;
 import org.poo.user.User;
 
 public class UpgradePlanCommand extends BaseCommand {
+    private static final int SILVER_UPGRADE = 100;
+    private static final int GOLD_UPGRADE = 250;
+    private static final int STANDARD_TO_GOLD_UPGRADE = 350;
+    private static final int GOLD_IDX = 3;
     public UpgradePlanCommand(final CommandInput command, final AppContext context) {
         super(command, context.getOutput(), context.getExchangeRates(),
               context.getUsers(), context.getUsersAccountsMap(),
@@ -40,48 +44,65 @@ public class UpgradePlanCommand extends BaseCommand {
         }
         Account account = accountMap.get(command.getAccount());
         User user = usersAccountsMap.get(command.getAccount());
-        if(user == null) {
+        if (user == null) {
             return;
         }
 
         int userPlanIdx = getPlanIdx(user.getPlan());
         int newPlanIdx = getPlanIdx(newPlan);
-        if(userPlanIdx < newPlanIdx) {
-            if(newPlan.equals("silver")) {
-                payUpgrade(account, 100, user, newPlan);
+        if (userPlanIdx < newPlanIdx) {
+            if (newPlan.equals("silver")) {
+                payUpgrade(account, SILVER_UPGRADE, user, newPlan);
                 return;
-            } else if(userPlanIdx != 1) {
-                payUpgrade(account, 250, user, newPlan);
+            } else if (userPlanIdx != 1) {
+                payUpgrade(account, GOLD_UPGRADE, user, newPlan);
                 return;
             } else {
-                payUpgrade(account, 350, user, newPlan);
+                payUpgrade(account, STANDARD_TO_GOLD_UPGRADE, user, newPlan);
                 return;
             }
         }
-        if(userPlanIdx > newPlanIdx) {
+        if (userPlanIdx > newPlanIdx) {
             addTransactionError(command.getAccount(), "You cannot downgrade your plan.");
         } else {
-            addTransactionError(command.getAccount(), "The user already has the " +
-                    getPlanType(newPlanIdx) + " plan.");
+            addTransactionError(command.getAccount(), "The user already has the "
+                    + getPlanType(newPlanIdx) + " plan.");
         }
     }
 
-    private int getPlanIdx(String plan) {
+    /**
+     * Get the index of the plan
+     * @param plan the plan
+     * @return the index of the plan
+     */
+    private int getPlanIdx(final String plan) {
         if (plan.equals("student") || plan.equals("standard")) {
             return 1;
         } else if (plan.equals("silver")) {
             return 2;
-        } else
-            return 3;
+        } else {
+            return GOLD_IDX;
+        }
     }
 
-    private String getPlanType(int idx) {
+    /**
+     * Get the plan type
+     * @param idx the index of the plan
+     * @return the plan type
+     */
+    private String getPlanType(final int idx) {
         if (idx == 2) {
             return "silver";
-        } else
+        } else {
             return "gold";
+        }
     }
 
+    /**
+     * Add a transaction error
+     * @param account the account
+     * @param message the message
+     */
     private void addTransactionError(final String account, final String message) {
         Transactions transaction = new TransactionAction(command.getTimestamp(), message);
         transaction.registerObserver(usersAccountsMap.get(account));
@@ -89,6 +110,11 @@ public class UpgradePlanCommand extends BaseCommand {
         transaction.notifyObservers();
     }
 
+    /**
+     * Add a transaction update plan
+     * @param account the account
+     * @param newPlan the new plan
+     */
     private void addTransactionUpdatePlan(final String account, final String newPlan) {
         Transactions transaction = new TransactionUpdatePlan(account, newPlan,
                 "Upgrade plan", command.getTimestamp());
@@ -97,9 +123,17 @@ public class UpgradePlanCommand extends BaseCommand {
         transaction.notifyObservers();
     }
 
-    private void payUpgrade(Account account, double amount, User user, String newPlan) {
-        if(account.getCurrency().equals("RON")) {
-            if(account.getBalance() < amount) {
+    /**
+     * Pay the upgrade
+     * @param account the account
+     * @param amount the amount
+     * @param user the user
+     * @param newPlan the new plan
+     */
+    private void payUpgrade(final Account account, final double amount,
+                            final User user, final String newPlan) {
+        if (account.getCurrency().equals("RON")) {
+            if (account.getBalance() < amount) {
                 addTransactionError(command.getAccount(), "Insufficient funds");
                 return;
             }
@@ -109,7 +143,7 @@ public class UpgradePlanCommand extends BaseCommand {
         } else {
             double convertedAmount = amount * ExchangeOperations.getExchangeRate(exchangeRates,
                     "RON", account.getCurrency());
-            if(account.getBalance() < convertedAmount) {
+            if (account.getBalance() < convertedAmount) {
                 addTransactionError(command.getAccount(), "Insufficient funds");
                 return;
             }

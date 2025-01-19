@@ -10,13 +10,20 @@ public class TransactionInterestRate extends Transactions {
     private double amount;
     private String currency;
 
-    public TransactionInterestRate(final int timestamp, final String description, final double amount, final String currency) {
+    public TransactionInterestRate(final int timestamp,
+                                   final String description,
+                                   final double amount, final String currency) {
         super(description, timestamp);
         this.amount = amount;
         this.currency = currency;
     }
 
-    public ObjectNode printJson(ObjectMapper mapper) {
+    /**
+     * Method that prints the transaction in json format.
+     * @param mapper object mapper for creating json objects
+     * @return the json object
+     */
+    public ObjectNode printJson(final ObjectMapper mapper) {
         ObjectNode interestRateNode = mapper.createObjectNode();
         interestRateNode.put("amount", getAmount());
         interestRateNode.put("currency", getCurrency());

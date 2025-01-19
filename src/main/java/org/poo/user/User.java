@@ -33,7 +33,7 @@ public class User implements TransactionObserver {
         this.birthDate = birthDate;
         this.occupation = occupation;
         this.age = age;
-        if(occupation.equals("student")) {
+        if (occupation.equals("student")) {
             this.plan = "student";
         } else {
             this.plan = "standard";

@@ -96,7 +96,7 @@ public final class AppOperationsSingleton {
                     splitPayments,
                     usersMap
             );
-            if(command != null) {
+            if (command != null) {
                 command.execute();
             }
         }

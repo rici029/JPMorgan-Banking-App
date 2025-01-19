@@ -25,11 +25,19 @@ public class BusinessUser {
         this.role = role;
     }
 
-    public ObjectNode toJson(ObjectMapper mapper, double spent, double deposited) {
+    /**
+     * Method that creates a JSON object from the business user.
+     * @param mapper the object mapper
+     * @param spentTotal the amount spent
+     * @param depositedTotal the amount deposited
+     * @return the object node
+     */
+    public ObjectNode toJson(final ObjectMapper mapper, final double spentTotal,
+                             final double depositedTotal) {
         ObjectNode objectNode = mapper.createObjectNode();
         objectNode.put("username", this.name);
-        objectNode.put("spent", spent);
-        objectNode.put("deposited", deposited);
+        objectNode.put("spent", spentTotal);
+        objectNode.put("deposited", depositedTotal);
         return objectNode;
     }
 }

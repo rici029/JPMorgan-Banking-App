@@ -1,7 +1,6 @@
 package org.poo.command.concrete;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.account.Account;
 import org.poo.appOperations.AccountOperations;
@@ -15,7 +14,6 @@ import org.poo.transactions.TransactionWithdraw;
 import org.poo.transactions.Transactions;
 import org.poo.user.User;
 
-import java.util.ArrayList;
 
 public class CashWithdrawalCommand extends BaseCommand {
     public CashWithdrawalCommand(final CommandInput command, final AppContext context) {
@@ -25,6 +23,9 @@ public class CashWithdrawalCommand extends BaseCommand {
               context.getAccountMap(), context.getAliasAccountMap());
     }
 
+    /**
+     * Method that executes the cash withdrawal command.
+     */
     @Override
     public void execute() {
         ObjectMapper mapper = new ObjectMapper();
@@ -40,7 +41,8 @@ public class CashWithdrawalCommand extends BaseCommand {
             return;
         }
         Account account = cardAccountMap.get(command.getCardNumber());
-        if(!account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())){
+        if (!account.getAccountType().equals("business")
+                && !account.getEmail().equals(command.getEmail())) {
             ObjectNode commandOutput = mapper.createObjectNode();
             commandOutput.put("command", command.getCommand());
             ObjectNode objectNode = mapper.createObjectNode();
@@ -53,12 +55,12 @@ public class CashWithdrawalCommand extends BaseCommand {
         }
         Card card = null;
         for (Card c : account.getCards()) {
-            if(c.getCardNumber().equals(command.getCardNumber())) {
+            if (c.getCardNumber().equals(command.getCardNumber())) {
                 card = c;
                 break;
             }
         }
-        if (card.getCardStatus().equals("frozen")){
+        if (card.getCardStatus().equals("frozen")) {
             ObjectNode commandOutput = mapper.createObjectNode();
             commandOutput.put("command", command.getCommand());
             ObjectNode objectNode = mapper.createObjectNode();
@@ -70,7 +72,7 @@ public class CashWithdrawalCommand extends BaseCommand {
             return;
         }
         for (User user : users) {
-            if(user.getEmail().equals(command.getEmail())){
+            if (user.getEmail().equals(command.getEmail())) {
                 continueCashWithdrawal(account, user);
                 return;
             }
@@ -85,13 +87,19 @@ public class CashWithdrawalCommand extends BaseCommand {
         output.add(commandOutput);
     }
 
+    /**
+     * Method that continues the cash withdrawal process.
+     * @param account the account
+     * @param user the user
+     */
     private void continueCashWithdrawal(final Account account, final User user) {
         ObjectMapper mapper = new ObjectMapper();
         double amount = command.getAmount();
         double balance = account.getBalance();
-        if (!account.getCurrency().equals("RON"))
+        if (!account.getCurrency().equals("RON")) {
             amount = amount * ExchangeOperations.getExchangeRate(exchangeRates, "RON",
                     account.getCurrency());
+        }
         if (balance < amount) {
             Transactions transaction = new TransactionAction(command.getTimestamp(),
                     "Insufficient funds");
@@ -112,7 +120,8 @@ public class CashWithdrawalCommand extends BaseCommand {
             output.add(commandOutput);
         }
         account.setBalance(balance - amount);
-        double commission = AccountOperations.checkForCommission(account, amount, user.getPlan(),exchangeRates);
+        double commission = AccountOperations.checkForCommission(account,
+                amount, user.getPlan(), exchangeRates);
         String description = "Cash withdrawal of " + command.getAmount();
         account.setBalance(account.getBalance() - commission);
         Transactions transaction = new TransactionWithdraw(command.getTimestamp(), description,

@@ -4,11 +4,12 @@ import lombok.Getter;
 import lombok.Setter;
 import org.poo.account.Account;
 import org.poo.appOperations.ExchangeOperations;
-import org.poo.transactions.*;
+import org.poo.transactions.TransactionCustomSplitPayment;
+import org.poo.transactions.TransactionErrorCustomSplit;
+import org.poo.transactions.Transactions;
 import org.poo.user.User;
 import org.poo.utils.Utils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -22,8 +23,15 @@ public class CustomSplitPayment extends SplitPayment {
         this.amountForUsers = amountForUsers;
     }
 
-    public void startPayment(HashMap<String, HashMap<String, Double>> exchangeRates,
-                             HashMap<String, Account> accountMap, HashMap<String, User> usersAccountMap) {
+    /**
+     * Method that starts the payment.
+     * @param exchangeRates exchange rates
+     * @param accountMap account map
+     * @param usersAccountMap users account map
+     */
+    public void startPayment(final HashMap<String, HashMap<String, Double>> exchangeRates,
+                             final HashMap<String, Account> accountMap,
+                             final HashMap<String, User> usersAccountMap) {
         List<String> accounts = this.getAccounts();
         String errorIBAN = null;
         for (int i = 0; i < accounts.size(); i++) {
@@ -45,13 +53,13 @@ public class CustomSplitPayment extends SplitPayment {
                 }
             }
         }
-        if(errorIBAN != null) {
+        if (errorIBAN != null) {
             Account errorAccount = accountMap.get(errorIBAN);
             errorSplitPayment(accounts, errorAccount, usersAccountMap, accountMap);
             return;
         }
 
-        for(String iban : accounts) {
+        for (String iban : accounts) {
             payBill(accountMap.get(iban), getCurrency(), exchangeRates);
             addSplitTransaction(amountForUsers.get(accounts.indexOf(iban)),
                     usersAccountMap.get(iban), accountMap.get(iban));
@@ -92,9 +100,10 @@ public class CustomSplitPayment extends SplitPayment {
                                    final HashMap<String, Account> accountMap) {
         for (String iban : accounts) {
             Account account = accountMap.get(iban);
-            String description = String.format("Split payment of %.2f %s", getAmount(), getCurrency());
-            String error = "Account " + errorAccount.getIban() +
-                    " has insufficient funds for a split payment.";
+            String description = String.format("Split payment of %.2f %s",
+                    getAmount(), getCurrency());
+            String error = "Account " + errorAccount.getIban()
+                    + " has insufficient funds for a split payment.";
             Transactions transaction = new TransactionErrorCustomSplit(description, getTimestamp(),
                     amountForUsers, getCurrency(), accounts, error, getType());
             User user = usersAccountMap.get(account.getIban());
@@ -126,11 +135,13 @@ public class CustomSplitPayment extends SplitPayment {
      */
     public void rejected(final HashMap<String, Account> accountMap,
                          final HashMap<String, User> usersAccountMap) {
-        for(String iban : getAccounts()) {
+        for (String iban : getAccounts()) {
             Account account = accountMap.get(iban);
-            String description = String.format("Split payment of %.2f %s", getAmount(), getCurrency());
+            String description = String.format("Split payment of %.2f %s", getAmount(),
+                    getCurrency());
             Transactions transaction = new TransactionErrorCustomSplit(description, getTimestamp(),
-                    amountForUsers, getCurrency(), getAccounts(), "One user rejected the payment.", getType());
+                    amountForUsers, getCurrency(), getAccounts(),
+                    "One user rejected the payment.", getType());
             User user = usersAccountMap.get(account.getIban());
             Utils.putTransactionInRightPlace(user.getTransactions(), transaction);
             Utils.putTransactionInRightPlace(account.getTransactions(), transaction);
