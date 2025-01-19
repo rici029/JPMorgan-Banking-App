@@ -19,6 +19,6 @@ public class AddAccountCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-        AccountOperations.addAccount(users, command, usersAccountsMap, accountMap);
+        AccountOperations.addAccount(users, command, usersAccountsMap, accountMap, exchangeRates);
     }
 }

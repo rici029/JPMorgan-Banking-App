@@ -10,7 +10,8 @@ public class Commerciant {
     private String type;
     private String cashbackStrategy;
 
-    public Commerciant(final String name, final String iban, final String type, final String cashbackStrategy) {
+    public Commerciant(final String name, final String iban, final String type,
+                       final String cashbackStrategy) {
         this.name = name;
         this.iban = iban;
         this.type = type;

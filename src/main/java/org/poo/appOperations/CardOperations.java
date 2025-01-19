@@ -1,5 +1,7 @@
 package org.poo.appOperations;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.account.Account;
 import org.poo.account.BusinessAccount;
 import org.poo.businessUser.BusinessUser;
@@ -19,7 +21,7 @@ public final class CardOperations {
         //not called
     }
 
-    private static void addTransactionToObservers(final Transactions transaction,
+    public static void addTransactionToObservers(final Transactions transaction,
                                                   final User user, final Account account) {
         transaction.registerObserver(user);
         transaction.registerObserver(account);
@@ -52,9 +54,6 @@ public final class CardOperations {
         if(user == null) {
             return;
         }
-        if (!user.getEmail().equals(email) && !account.getAccountType().equals("business")) {
-            return;
-        }
         Card card = new Card(iban, email, cardType);
         account.addCard(card);
         usersCardsMap.put(card.getCardNumber(), user);
@@ -69,11 +68,10 @@ public final class CardOperations {
      * Delete a card
      * @param cardAccountMap map of cards and their accounts
      * @param command command input
-     * @param usersCardsMap map of users and their cards
+     * @param usersMap map of users
      */
     public static void deleteCard(final HashMap<String, Account> cardAccountMap,
                                   final CommandInput command,
-                                  final  HashMap<String, User> usersCardsMap,
                                   final HashMap<String, User> usersMap) {
         String cardNumber = command.getCardNumber();
         if (!cardAccountMap.containsKey(cardNumber)) {
@@ -93,6 +91,11 @@ public final class CardOperations {
                         return;
                     }
                 }
+                if(!account.getAccountType().equals("business") && !card.getEmail().equals(user.getEmail())) {
+                    return;
+                }
+                if(account.getBalance() > 0)
+                    return;
                 account.removeCard(card);
                 cardAccountMap.remove(cardNumber);
                 Transactions transaction = new TransactionCard(card.getCardNumber(),

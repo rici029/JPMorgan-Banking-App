@@ -36,12 +36,14 @@ public class UpgradePlanCommand extends BaseCommand {
             error.set("output", out);
             error.put("timestamp", command.getTimestamp());
             output.add(error);
+            return;
         }
         Account account = accountMap.get(command.getAccount());
         User user = usersAccountsMap.get(command.getAccount());
         if(user == null) {
             return;
         }
+
         int userPlanIdx = getPlanIdx(user.getPlan());
         int newPlanIdx = getPlanIdx(newPlan);
         if(userPlanIdx < newPlanIdx) {

@@ -24,6 +24,6 @@ public class DeleteCardCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-        CardOperations.deleteCard(cardAccountMap, command, usersCardsMap, usersMap);
+        CardOperations.deleteCard(cardAccountMap, command, usersMap);
     }
 }

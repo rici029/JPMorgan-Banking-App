@@ -49,16 +49,16 @@ public class WithdrawSavingsCommand extends BaseCommand {
                     accountSavings.getCurrency(), toCurrency);
             amountToWithdraw *= exchangeRate;
         }
-        if(accountSavings.getBalance() < amountToWithdraw) {
-            Transactions transaction = new TransactionAction(command.getTimestamp(),
-                    "Insufficient funds");
-            transaction.registerObserver(user);
-            transaction.registerObserver(accountSavings);
-            transaction.notifyObservers();
-            return;
-        }
         for(Account acc : user.getAccounts()) {
             if(acc.getCurrency().equals(toCurrency) && acc.getAccountType().equals("classic")) {
+                if(accountSavings.getBalance() < amountToWithdraw) {
+                    Transactions transaction = new TransactionAction(command.getTimestamp(),
+                            "Insufficient funds");
+                    transaction.registerObserver(user);
+                    transaction.registerObserver(accountSavings);
+                    transaction.notifyObservers();
+                    return;
+                }
                 acc.setBalance(acc.getBalance() + amountToWithdraw);
                 accountSavings.setBalance(accountSavings.getBalance() - amountToWithdraw);
                 Transactions transaction = new TransactionSavingsWithdraw("Savings withdrawal",

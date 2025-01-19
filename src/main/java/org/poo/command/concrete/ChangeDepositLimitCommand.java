@@ -4,22 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.Setter;
+import org.poo.account.Account;
 import org.poo.account.BusinessAccount;
-import org.poo.businessUser.BusinessUser;
 import org.poo.command.AppContext;
 import org.poo.command.BaseCommand;
 import org.poo.fileio.CommandInput;
 import org.poo.user.User;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 
 @Getter @Setter
-public class AddNewBusinessAssociateCommand extends BaseCommand {
+public class ChangeDepositLimitCommand extends BaseCommand {
     private HashMap<String, User> usersMap;
-
-    public AddNewBusinessAssociateCommand(CommandInput commandInput, AppContext context, HashMap<String, User> usersMap) {
-        super(commandInput, context.getOutput(), context.getExchangeRates(),
+    public ChangeDepositLimitCommand(CommandInput command, AppContext context,
+                                     HashMap<String, User> usersMap) {
+        super(command, context.getOutput(), context.getExchangeRates(),
                 context.getUsers(), context.getUsersAccountsMap(),
                 context.getUsersCardsMap(), context.getCardAccountMap(),
                 context.getAccountMap(), context.getAliasAccountMap());
@@ -32,7 +31,7 @@ public class AddNewBusinessAssociateCommand extends BaseCommand {
         if (!usersMap.containsKey(userEmail)) {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode error = mapper.createObjectNode();
-            error.put("command", "addNewBusinessAssociate");
+            error.put("command", "changeDepositLimit");
             ObjectNode out = mapper.createObjectNode();
             out.put("description", "User not found");
             out.put("timestamp", command.getTimestamp());
@@ -41,22 +40,22 @@ public class AddNewBusinessAssociateCommand extends BaseCommand {
             output.add(error);
             return;
         }
-        User user = usersMap.get(userEmail);
-        String role = command.getRole();
-        BusinessAccount businessAccount = (BusinessAccount) accountMap.get(accountIban);
-        BusinessUser businessUser = new BusinessUser(user.getLastName() + " " + user.getFirstName(),
-                user.getEmail(), role);
-        LinkedHashMap<String, BusinessUser> managers = businessAccount.getManagers();
-        LinkedHashMap<String, BusinessUser> employees = businessAccount.getEmployees();
-        if(businessAccount.getEmail().equals(command.getEmail()))
+        Account account = accountMap.get(accountIban);
+        if(!account.getAccountType().equals("business"))
             return;
-        if(managers.containsKey(userEmail) || employees.containsKey(userEmail)) {
-            return;
-        }
-        if (role.equals("manager")) {
-            managers.put(userEmail, businessUser);
+        BusinessAccount businessAccount = (BusinessAccount) account;
+        if(businessAccount.getEmail().equals(userEmail)) {
+            businessAccount.setDepositLimit((command.getAmount()));
         } else {
-            employees.put(userEmail, businessUser);
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode error = mapper.createObjectNode();
+            error.put("command", "changeDepositLimit");
+            ObjectNode out = mapper.createObjectNode();
+            out.put("description", "You must be owner in order to change deposit limit.");
+            out.put("timestamp", command.getTimestamp());
+            error.set("output", out);
+            error.put("timestamp", command.getTimestamp());
+            output.add(error);
         }
     }
 }

@@ -40,17 +40,27 @@ public class ChangeSpendingLimitCommand extends BaseCommand {
             return;
         }
         Account account = accountMap.get(accountIban);
-        if(!account.getAccountType().equals("business"))
+        if(!account.getAccountType().equals("business")) {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode error = mapper.createObjectNode();
+            error.put("command", "changeSpendingLimit");
+            ObjectNode out = mapper.createObjectNode();
+            out.put("description", "This is not a business account");
+            out.put("timestamp", command.getTimestamp());
+            error.set("output", out);
+            error.put("timestamp", command.getTimestamp());
+            output.add(error);
             return;
+        }
         BusinessAccount businessAccount = (BusinessAccount) account;
         if(businessAccount.getEmail().equals(userEmail)) {
-            businessAccount.setSpendingLimit(command.getSpendingLimit());
+            businessAccount.setSpendingLimit(command.getAmount());
         } else {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "changeSpendingLimit");
             ObjectNode out = mapper.createObjectNode();
-            out.put("description", "User does not have permission to change the spending limit");
+            out.put("description", "You must be owner in order to change spending limit.");
             out.put("timestamp", command.getTimestamp());
             error.set("output", out);
             error.put("timestamp", command.getTimestamp());

@@ -7,6 +7,7 @@ import org.poo.account.AccountSavings;
 import org.poo.account.BusinessAccount;
 import org.poo.businessUser.BusinessUser;
 import org.poo.card.Card;
+import org.poo.command.concrete.CashWithdrawalCommand;
 import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
 import org.poo.transactions.*;
@@ -69,12 +70,13 @@ public final class AccountOperations {
      */
     public static void addAccount(final ArrayList<User> users, final CommandInput command,
                                   final HashMap<String, User> usersAccountsMap,
-                                  final HashMap<String, Account> accountMap) {
+                                  final HashMap<String, Account> accountMap,
+                                  final HashMap<String, HashMap<String, Double>> exchangeRates) {
         String email = command.getEmail();
         String currency = command.getCurrency();
         String accountType = command.getAccountType();
         double interestRate = command.getInterestRate();
-        Account account = AccountFactory.createAccount(email, currency, accountType, interestRate);
+        Account account = AccountFactory.createAccount(email, currency, accountType, interestRate, exchangeRates);
         for (User user : users) {
             if (user.getEmail().equals(email)) {
                 user.addAccount(account);
@@ -101,7 +103,7 @@ public final class AccountOperations {
             return;
         }
         Account account = accountMap.get(iban);
-        if(account.getAccountType().equals("business")) {
+        if(account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())) {
             BusinessAccount businessAccount = (BusinessAccount) account;
             BusinessUser businessUser = null;
             if(businessAccount.getManagers().containsKey(command.getEmail())) {
@@ -116,8 +118,7 @@ public final class AccountOperations {
                 if(businessAccount.getDepositLimit() != 0 && amount > businessAccount.getDepositLimit())
                     return;
             }
-            businessUser.setDeposited(businessUser.getDeposited() + amount);
-            businessAccount.setTotalDeposited(businessAccount.getTotalDeposited() + amount);
+            businessUser.getDeposited().put(command.getTimestamp(), amount);
         }
         account.deposit(amount);
     }
@@ -176,6 +177,9 @@ public final class AccountOperations {
         User user = usersAccountsMap.get(iban);
         for (Account account : user.getAccounts()) {
             if (account.getIban().equals(iban)) {
+                if(!account.getEmail().equals(command.getEmail())) {
+                    return;
+                }
                 account.setMinimumBalance(minimumBalance);
                 break;
             }
@@ -198,10 +202,11 @@ public final class AccountOperations {
                                  final HashMap<String, User> usersAccountMap,
                                  final HashMap<String, User> usersCardsMap,
                                  final ArrayList<Commerciant> commerciants) {
-        if(command.getAmount() <= 0) {
+        if (command.getAmount() <= 0) {
             return;
         }
         double convertedAmount;
+        BusinessAccount businessAccount = null;
         String cardNumber = command.getCardNumber();
         double amount = command.getAmount();
         if (!cardAccountMap.containsKey(cardNumber)) {
@@ -209,6 +214,19 @@ public final class AccountOperations {
             return;
         }
         Account account = cardAccountMap.get(cardNumber);
+
+        ObjectMapper mapper = new ObjectMapper();
+        if(!account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())){
+            ObjectNode commandOutput = mapper.createObjectNode();
+            commandOutput.put("command", command.getCommand());
+            ObjectNode objectNode = mapper.createObjectNode();
+            objectNode.put("description", "Card not found");
+            objectNode.put("timestamp", command.getTimestamp());
+            commandOutput.set("output", objectNode);
+            commandOutput.put("timestamp", command.getTimestamp());
+            output.add(commandOutput);
+            return;
+        }
         User user = usersAccountMap.get(account.getIban());
         Card card = null;
         for (Card c : account.getCards()) {
@@ -223,12 +241,32 @@ public final class AccountOperations {
             return;
         }
 
+
+        if (!card.getEmail().equals(user.getEmail()) && !account.getAccountType().equals("business")){
+            PrintOperations.cardNotFound(output, command);
+            return;
+        }
+
+        if (account.getAccountType().equals("business")) {
+            businessAccount = (BusinessAccount) account;
+            if(!businessAccount.getManagers().containsKey(command.getEmail()) &&
+                    !businessAccount.getEmployees().containsKey(command.getEmail()) &&
+                    !account.getEmail().equals(command.getEmail())) {
+                PrintOperations.cardNotFound(output, command);
+                return;
+            }
+        }
+
         if (card.getCardStatus().equals("frozen")) {
             Transactions transaction = new TransactionAction(command.getTimestamp(),
                     "The card is frozen");
             addTransactionToObservers(transaction, user, account);
             return;
         }
+
+
+        if (CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants) == null)
+            return;
 
         String toCurrency = account.getCurrency();
 
@@ -242,6 +280,25 @@ public final class AccountOperations {
                         "Insufficient funds");
                 addTransactionToObservers(transaction, user, account);
                 return;
+            }
+            if (account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())) {
+                BusinessUser businessUser = null;
+                if (businessAccount.getManagers().containsKey(command.getEmail())) {
+                    businessUser = businessAccount.getManagers().get(command.getEmail());
+                } else if (businessAccount.getEmployees().containsKey(command.getEmail())) {
+                    businessUser = businessAccount.getEmployees().get(command.getEmail());
+                }
+
+                if (businessUser.getRole().equals("employee")) {
+                    if(businessAccount.getSpendingLimit() != 0 && amount > businessAccount.getSpendingLimit())
+                        return;
+                }
+
+                businessUser.getSpent().put(command.getTimestamp(), amount);
+                HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
+                spendings.put(command.getTimestamp(), command.getCommerciant());
+                if (!businessAccount.getCommerciants().contains(command.getCommerciant()))
+                    businessAccount.getCommerciants().add(command.getCommerciant());
             }
             account.pay(amount);
             CashbackOperations.getCashback(account,
@@ -278,6 +335,25 @@ public final class AccountOperations {
                         "Insufficient funds");
                 addTransactionToObservers(transaction, user, account);
                 return;
+            }
+            if(account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())) {
+                businessAccount = (BusinessAccount) account;
+                BusinessUser businessUser = null;
+                if(businessAccount.getManagers().containsKey(command.getEmail())) {
+                    businessUser = businessAccount.getManagers().get(command.getEmail());
+                } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+                    businessUser = businessAccount.getEmployees().get(command.getEmail());
+                }
+
+                if(businessUser.getRole().equals("employee")) {
+                    if(businessAccount.getSpendingLimit() != 0 && convertedAmount > businessAccount.getSpendingLimit())
+                        return;
+                }
+                businessUser.getSpent().put(command.getTimestamp(), convertedAmount);
+                HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
+                spendings.put(command.getTimestamp(), command.getCommerciant());
+                if(!businessAccount.getCommerciants().contains(command.getCommerciant()))
+                    businessAccount.getCommerciants().add(command.getCommerciant());
             }
             account.pay(convertedAmount);
             CashbackOperations.getCashback(account, CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants), convertedAmount, user,
@@ -355,11 +431,12 @@ public final class AccountOperations {
                                  final HashMap<String, Account> accountMap,
                                  final HashMap<String, User> usersAccountMap,
                                  final HashMap<String, Account> aliasAccountMap,
-                                 final ArrayNode output) {
+                                 final ArrayNode output, final ArrayList<Commerciant> commerciants,
+                                 final HashMap<String, User> usersMap) {
         String from = command.getAccount();
         String to = command.getReceiver();
         double amount = command.getAmount();
-        User userSender = usersAccountMap.get(from);
+        User userSender = usersMap.get(command.getEmail());
         ObjectMapper mapper = new ObjectMapper();
         if (userSender == null) {
             ObjectNode error = mapper.createObjectNode();
@@ -372,8 +449,51 @@ public final class AccountOperations {
             output.add(error);
             return;
         }
-        User userReceiver = usersAccountMap.get(to);
-        if (userReceiver == null) {
+
+        Account toAccount = null;
+        Account fromAccount;
+        if (!aliasAccountMap.containsKey(from)) {
+            if (!accountMap.containsKey(from)) {
+                ObjectNode error = mapper.createObjectNode();
+                error.put("command", command.getCommand());
+                ObjectNode outNode = mapper.createObjectNode();
+                outNode.put("timestamp", command.getTimestamp());
+                outNode.put("description", "User not found");
+                error.set("output", outNode);
+                error.put("timestamp", command.getTimestamp());
+                output.add(error);
+                return;
+            } else {
+                fromAccount = accountMap.get(from);
+            }
+        } else {
+            fromAccount = aliasAccountMap.get(from);
+        }
+        Commerciant commerciant = CommerciantOperation.findCommerciantWithIban(to, commerciants);
+        User userReceiver = null;
+        if (commerciant == null) {
+            if (!aliasAccountMap.containsKey(to)) {
+                if (!accountMap.containsKey(to)) {
+                    ObjectNode error = mapper.createObjectNode();
+                    error.put("command", command.getCommand());
+                    ObjectNode outNode = mapper.createObjectNode();
+                    outNode.put("timestamp", command.getTimestamp());
+                    outNode.put("description", "User not found");
+                    error.set("output", outNode);
+                    error.put("timestamp", command.getTimestamp());
+                    output.add(error);
+                    return;
+                } else {
+                    toAccount = accountMap.get(to);
+                    userReceiver = usersAccountMap.get(toAccount.getIban());
+                }
+            } else {
+                toAccount = aliasAccountMap.get(to);
+                userReceiver = usersAccountMap.get(toAccount.getIban());
+            }
+        }
+
+        if (userReceiver == null && commerciant == null) {
             ObjectNode error = mapper.createObjectNode();
             error.put("command", command.getCommand());
             ObjectNode outNode = mapper.createObjectNode();
@@ -384,29 +504,6 @@ public final class AccountOperations {
             output.add(error);
             return;
         }
-        Account toAccount;
-        Account fromAccount;
-        if (!accountMap.containsKey(from) || !accountMap.containsKey(to)) {
-            return;
-        }
-        if (!aliasAccountMap.containsKey(to)) {
-            if (!accountMap.containsKey(to)) {
-                return;
-            } else {
-                toAccount = accountMap.get(to);
-            }
-        } else {
-            toAccount = aliasAccountMap.get(to);
-        }
-        if (!aliasAccountMap.containsKey(from)) {
-            if (!accountMap.containsKey(from)) {
-                return;
-            } else {
-                fromAccount = accountMap.get(from);
-            }
-        } else {
-            fromAccount = aliasAccountMap.get(from);
-        }
         double commissionSender = checkForCommission(fromAccount, amount, userSender.getPlan(),
                 exchangeRates);
         if (fromAccount.getBalance() - (amount + commissionSender) < 0) {
@@ -415,8 +512,53 @@ public final class AccountOperations {
             addTransactionToObservers(transaction, userSender, fromAccount);
             return;
         }
+
+        BusinessAccount businessAccount = null;
+
+        if(fromAccount.getAccountType().equals("business"))
+            businessAccount = (BusinessAccount) fromAccount;
+        if(fromAccount.getAccountType().equals("business") && !fromAccount.getEmail().equals(command.getEmail())) {
+            BusinessUser businessUser = null;
+            if(businessAccount.getManagers().containsKey(command.getEmail())) {
+                businessUser = businessAccount.getManagers().get(command.getEmail());
+            } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+                businessUser = businessAccount.getEmployees().get(command.getEmail());
+            }
+            if(businessUser == null) {
+                return;
+            }
+            if(businessUser.getRole().equals("employee")) {
+                if(businessAccount.getSpendingLimit() != 0 && amount > businessAccount.getSpendingLimit())
+                    return;
+            }
+            businessUser.getSpent().put(command.getTimestamp(), amount);
+        }
         fromAccount.pay(amount);
         fromAccount.pay(commissionSender);
+        if(commerciant != null) {
+            if(businessAccount != null && !fromAccount.getEmail().equals(command.getEmail())) {
+                BusinessUser businessUser = null;
+                if(businessAccount.getManagers().containsKey(command.getEmail())) {
+                    businessUser = businessAccount.getManagers().get(command.getEmail());
+                } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+                    businessUser = businessAccount.getEmployees().get(command.getEmail());
+                }
+                if(businessUser == null) {
+                    return;
+                }
+                HashMap<Integer, String> spendings = businessUser.getToCommerciantsSpendingList();
+                spendings.put(command.getTimestamp(), commerciant.getName());
+                if(!businessAccount.getCommerciants().contains(commerciant.getName()))
+                    businessAccount.getCommerciants().add(commerciant.getName());
+            }
+            CashbackOperations.getCashback(fromAccount, commerciant, amount, userSender,
+                    exchangeRates);
+            Transactions transaction = new TransactionTransfer(command.getTimestamp(), from,
+                    to, amount + " " + fromAccount.getCurrency(), command.getDescription(),
+                    "sent");
+            addTransactionToObservers(transaction, userSender, fromAccount);
+            return;
+        }
         String fromCurrency = fromAccount.getCurrency();
         String toCurrency = toAccount.getCurrency();
         double convertedAmount = 0;

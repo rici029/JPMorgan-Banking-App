@@ -1,5 +1,7 @@
 package org.poo.account;
 
+import java.util.HashMap;
+
 public final class AccountFactory {
     private AccountFactory() {
         // not called
@@ -14,14 +16,15 @@ public final class AccountFactory {
      * @return
      */
     public static Account createAccount(final String email, final String currency,
-                                        final String accountType, final double interestRate) {
+                                        final String accountType, final double interestRate,
+                                        final HashMap<String, HashMap<String, Double>> exchangeRates) {
         switch (accountType) {
             case "classic":
                 return new AccountClassic(email, currency, accountType);
             case "savings":
                 return new AccountSavings(email, currency, accountType, interestRate);
             case "business":
-                return new BusinessAccount(email, currency, accountType);
+                return new BusinessAccount(email, currency, accountType, exchangeRates);
             default:
                 return null;
         }

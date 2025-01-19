@@ -40,6 +40,17 @@ public class CashWithdrawalCommand extends BaseCommand {
             return;
         }
         Account account = cardAccountMap.get(command.getCardNumber());
+        if(!account.getAccountType().equals("business") && !account.getEmail().equals(command.getEmail())){
+            ObjectNode commandOutput = mapper.createObjectNode();
+            commandOutput.put("command", command.getCommand());
+            ObjectNode objectNode = mapper.createObjectNode();
+            objectNode.put("description", "Card not found");
+            objectNode.put("timestamp", command.getTimestamp());
+            commandOutput.set("output", objectNode);
+            commandOutput.put("timestamp", command.getTimestamp());
+            output.add(commandOutput);
+            return;
+        }
         Card card = null;
         for (Card c : account.getCards()) {
             if(c.getCardNumber().equals(command.getCardNumber())) {

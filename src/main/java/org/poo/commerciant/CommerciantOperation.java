@@ -12,4 +12,11 @@ public final class CommerciantOperation {
                 return c;
         return null;
     }
+
+    public static Commerciant findCommerciantWithIban(final String iban, final ArrayList<Commerciant> commerciants) {
+        for (Commerciant c : commerciants)
+            if (c.getIban().equals(iban))
+                return c;
+        return null;
+    }
 }
