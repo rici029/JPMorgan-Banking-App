@@ -4,6 +4,7 @@ import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommerciantInput;
 import org.poo.fileio.ExchangeInput;
 import org.poo.fileio.UserInput;
+import org.poo.transactions.Transactions;
 import org.poo.user.User;
 
 import java.util.ArrayList;
@@ -141,5 +142,22 @@ public final class Utils {
         }
 
         return commerciants;
+    }
+
+    /**
+     * Puts a transaction in the right place in the list of transactions.
+     * @param transaction the list of transactions
+     * @param transactionToAdd the transaction to add
+     */
+    public static void putTransactionInRightPlace(final ArrayList<Transactions> transaction,
+                                                  final Transactions transactionToAdd) {
+        int i = 0;
+        for (Transactions t : transaction) {
+            if (t.getTimestamp() > transactionToAdd.getTimestamp()) {
+                break;
+            }
+            i++;
+        }
+        transaction.add(i, transactionToAdd);
     }
 }

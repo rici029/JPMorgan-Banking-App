@@ -81,10 +81,14 @@ public final class Main {
         HashMap<String, HashMap<String,
                 Double>> exchangeRates = Utils.createExchangeRates(inputData.getExchangeRates());
         ArrayList<User> users = Utils.createUsers(inputData.getUsers());
+        HashMap<String, User> usersMap= new HashMap<>();
+        for(User user : users) {
+            usersMap.put(user.getEmail(), user);
+        }
         ArrayList<Commerciant> commerciants = Utils.createCommerciant(inputData.getCommerciants());
 
         AppOperationsSingleton appOperations = AppOperationsSingleton.getInstance(exchangeRates,
-                commands, users, commerciants);
+                commands, users, commerciants, usersMap);
 
         appOperations.startApp(output);
 

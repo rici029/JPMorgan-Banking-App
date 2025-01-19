@@ -72,8 +72,6 @@ public final class AccountOperations {
         String currency = command.getCurrency();
         String accountType = command.getAccountType();
         double interestRate = command.getInterestRate();
-        if(accountType.equals("business"))
-            return;
         Account account = AccountFactory.createAccount(email, currency, accountType, interestRate);
         for (User user : users) {
             if (user.getEmail().equals(email)) {
@@ -231,12 +229,6 @@ public final class AccountOperations {
                 addTransactionToObservers(transaction, user, account);
                 return;
             }
-            if(amount >= 300 && user.getPlan().equals("silver")) {
-                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
-                if(user.getNrOfPaymentsForUpgrade() == 5) {
-                    user.setPlan("gold");
-                }
-            }
             account.pay(amount);
             CashbackOperations.getCashback(account,
                     CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants),
@@ -246,6 +238,21 @@ public final class AccountOperations {
                     "Card payment", amount,
                     command.getCommerciant());
             addTransactionToObservers(transaction, user, account);
+            double amountInRON = amount;
+            if (!account.getCurrency().equals("RON")) {
+                double exchangeRateRON = ExchangeOperations.getExchangeRate(exchangeRates,
+                        account.getCurrency(), "RON");
+                amountInRON = amount * exchangeRateRON;
+            }
+            if(amountInRON >= 300 && user.getPlan().equals("silver")) {
+                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
+                if(user.getNrOfPaymentsForUpgrade() == 5) {
+                    user.setPlan("gold");
+                    Transactions transactionUpgrade = new TransactionUpdatePlan(account.getIban(),
+                            "gold", "Upgrade plan", command.getTimestamp());
+                    addTransactionToObservers(transactionUpgrade, user, account);
+                }
+            }
         } else {
             double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
                     fromCurrency, toCurrency);
@@ -258,12 +265,6 @@ public final class AccountOperations {
                 addTransactionToObservers(transaction, user, account);
                 return;
             }
-            if(convertedAmount >= 300 && user.getPlan().equals("silver")) {
-                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
-                if(user.getNrOfPaymentsForUpgrade() == 5) {
-                    user.setPlan("gold");
-                }
-            }
             account.pay(convertedAmount);
             CashbackOperations.getCashback(account, CommerciantOperation.findCommerciant(command.getCommerciant(), commerciants), convertedAmount, user,
                     exchangeRates);
@@ -272,6 +273,21 @@ public final class AccountOperations {
                     "Card payment", convertedAmount,
                     command.getCommerciant());
             addTransactionToObservers(transaction, user, account);
+            double amountInRON = amount;
+            if (!account.getCurrency().equals("RON")) {
+                double exchangeRateRON = ExchangeOperations.getExchangeRate(exchangeRates,
+                        account.getCurrency(), "RON");
+                amountInRON = amount * exchangeRateRON;
+            }
+            if(amountInRON >= 300 && user.getPlan().equals("silver")) {
+                user.setNrOfPaymentsForUpgrade(user.getNrOfPaymentsForUpgrade() + 1);
+                if(user.getNrOfPaymentsForUpgrade() == 5) {
+                    user.setPlan("gold");
+                    Transactions transactionUpgrade = new TransactionUpdatePlan(account.getIban(),
+                            "gold", "Upgrade plan", command.getTimestamp());
+                    addTransactionToObservers(transactionUpgrade, user, account);
+                }
+            }
         }
         if (card.getCardType().equals("onetime")) {
             updateOneTimeCard(command, cardAccountMap, usersCardsMap, cardNumber, card,
@@ -433,119 +449,6 @@ public final class AccountOperations {
         account.setAlias(alias);
         aliasAccountMap.put(alias, account);
     }
-
-    /**
-     *
-     * @param command command input
-     * @param exchangeRates exchange rates
-     * @param accountMap map of accounts
-     * @param usersAccountMap map of users and their accounts
-     */
-    public static void splitPayment(final CommandInput command,
-                                    final HashMap<String, HashMap<String, Double>> exchangeRates,
-                                    final HashMap<String, Account> accountMap,
-                                    final HashMap<String, User> usersAccountMap) {
-        List<String> accounts = command.getAccounts();
-        double amount = command.getAmount();
-        String currency = command.getCurrency();
-        int noOfAccounts = accounts.size();
-        double amountPerAccount = amount / noOfAccounts;
-        String errorIBAN = null;
-
-        for (String iban : accounts) {
-            Account account = accountMap.get(iban);
-            if (account.getCurrency().equals(currency)) {
-                if (account.getBalance() < amountPerAccount) {
-                    errorIBAN = iban;
-                }
-            } else {
-                double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
-                        currency, account.getCurrency());
-                double convertedAmount = amountPerAccount * exchangeRate;
-                if (account.getBalance() < convertedAmount) {
-                    errorIBAN = iban;
-                }
-            }
-        }
-        if (errorIBAN != null) {
-            Account errorAccount = accountMap.get(errorIBAN);
-            errorSplitPayment(accounts, errorAccount, command,
-                    usersAccountMap, amountPerAccount, accountMap);
-            return;
-        }
-
-        for (String iban : accounts) {
-            payBill(accountMap.get(iban), amountPerAccount, currency, exchangeRates);
-            addSplitTransaction(amountPerAccount, command,
-                    usersAccountMap.get(iban), accountMap.get(iban));
-        }
-    }
-
-    /**
-     *
-     * @param account account that pays the bill
-     * @param amount amount to be paid
-     * @param currency currency of the amount
-     * @param exchangeRates exchange rates
-     */
-    private static void payBill(final Account account, final double amount, final String currency,
-                                final HashMap<String, HashMap<String, Double>> exchangeRates) {
-        if (account.getCurrency().equals(currency)) {
-            account.pay(amount);
-        } else {
-            double exchangeRate = ExchangeOperations.getExchangeRate(exchangeRates,
-                    currency, account.getCurrency());
-            if (exchangeRate == -1) {
-                return;
-            }
-            double convertedAmount = amount * exchangeRate;
-            account.pay(convertedAmount);
-        }
-    }
-
-    /**
-     *
-     * @param accounts list of accounts to split the payment
-     * @param errorAccount account that has insufficient funds
-     * @param command command input
-     * @param usersAccountMap map of users and their accounts
-     * @param amountPerAccount amount per account
-     * @param accountMap map of accounts
-     */
-    private static void errorSplitPayment(final List<String> accounts, final Account errorAccount,
-                                          final CommandInput command,
-                                          final HashMap<String, User> usersAccountMap,
-                                          final double amountPerAccount,
-                                          final HashMap<String, Account> accountMap) {
-        for (String iban : accounts) {
-            Account account = accountMap.get(iban);
-            String description = String.format("Split payment of %.2f %s", command.getAmount(),
-                    command.getCurrency());
-            Transactions transaction = new TransactionErrorSplitPayment(description,
-                    command.getTimestamp(), amountPerAccount, command.getCurrency(),
-                    command.getAccounts(), errorAccount.getIban());
-            User user = usersAccountMap.get(account.getIban());
-            addTransactionToObservers(transaction, user, account);
-        }
-    }
-
-    /**
-     *
-     * @param amountPerAccount amount per account
-     * @param command command input
-     * @param user user that pays the bill
-     * @param account account that pays the bill
-     */
-    private static void addSplitTransaction(final double amountPerAccount,
-                                            final CommandInput command, final User user,
-                                            final Account account) {
-        String description = String.format("Split payment of %.2f %s", command.getAmount(),
-                command.getCurrency());
-        Transactions transaction = new TransactionSplitPayment(amountPerAccount,
-                command.getCurrency(), command.getAccounts(), description, command.getTimestamp());
-        addTransactionToObservers(transaction, user, account);
-    }
-
     /**
      *
      * @param accountMap map of accounts

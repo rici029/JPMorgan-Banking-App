@@ -1,5 +1,7 @@
 package org.poo.command.concrete;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.account.Account;
 import org.poo.appOperations.ExchangeOperations;
 import org.poo.command.AppContext;
@@ -25,7 +27,15 @@ public class UpgradePlanCommand extends BaseCommand {
     public void execute() {
         String newPlan = command.getNewPlanType();
         if (!accountMap.containsKey(command.getAccount())) {
-            //Account not found
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode error = mapper.createObjectNode();
+            error.put("command", "upgradePlan");
+            ObjectNode out = mapper.createObjectNode();
+            out.put("description", "Account not found");
+            out.put("timestamp", command.getTimestamp());
+            error.set("output", out);
+            error.put("timestamp", command.getTimestamp());
+            output.add(error);
         }
         Account account = accountMap.get(command.getAccount());
         User user = usersAccountsMap.get(command.getAccount());

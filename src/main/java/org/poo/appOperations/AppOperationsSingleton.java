@@ -9,6 +9,7 @@ import org.poo.command.Command;
 import org.poo.command.CommandFactory;
 import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
+import org.poo.splitPayment.SplitPayment;
 import org.poo.user.User;
 
 import java.util.ArrayList;
@@ -27,11 +28,14 @@ public final class AppOperationsSingleton {
     private HashMap<String, Account> cardAccountMap;
     private HashMap<String, Account> accountMap;
     private HashMap<String, Account> aliasAccountMap;
+    private ArrayList<SplitPayment> splitPayments;
+    private HashMap<String, User> usersMap;
 
     // Private constructor to prevent direct instantiation
     private AppOperationsSingleton(final HashMap<String, HashMap<String, Double>> exchangeRates,
                                    final CommandInput[] commands, final ArrayList<User> users,
-                                   final ArrayList<Commerciant> commerciants) {
+                                   final ArrayList<Commerciant> commerciants,
+                                   final HashMap<String, User> usersMap) {
         this.exchangeRates = exchangeRates;
         this.commands = commands;
         this.users = users;
@@ -41,6 +45,8 @@ public final class AppOperationsSingleton {
         this.accountMap = new HashMap<>();
         this.aliasAccountMap = new HashMap<>();
         this.commerciants = commerciants;
+        this.splitPayments = new ArrayList<>();
+        this.usersMap = usersMap;
     }
 
     /**
@@ -54,11 +60,13 @@ public final class AppOperationsSingleton {
                                                              Double>> exchangeRates,
                                                      final CommandInput[] commands,
                                                      final ArrayList<User> users,
-                                                     final ArrayList<Commerciant> commerciants) {
+                                                     final ArrayList<Commerciant> commerciants,
+                                                     final HashMap<String, User> usersMap) {
         if (instance == null) {
             synchronized (AppOperationsSingleton.class) {
                 if (instance == null) {
-                    instance = new AppOperationsSingleton(exchangeRates, commands, users, commerciants);
+                    instance = new AppOperationsSingleton(exchangeRates, commands, users,
+                            commerciants, usersMap);
                 }
             }
         }
@@ -84,7 +92,9 @@ public final class AppOperationsSingleton {
                             accountMap,
                             aliasAccountMap
                     ),
-                    commerciants
+                    commerciants,
+                    splitPayments,
+                    usersMap
             );
             if(command != null) {
                 command.execute();

@@ -10,19 +10,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Getter @Setter
-public class TransactionCustomSplitPayment extends Transactions {
+public class TransactionErrorCustomSplit extends Transactions {
     private List<Double> amountForUsers;
     private String currency;
     private List<String> accounts;
     private String splitPaymentType;
+    private String errorMessage;
 
-    public TransactionCustomSplitPayment(final String description, final int timestamp,
-                                         final List<Double> amountForUsers, final String currency,
-                                         final List<String> accounts, final String splitPaymentType) {
+    public TransactionErrorCustomSplit(final String description, final int timestamp,
+                                       final List<Double> amountForUsers, final String currency,
+                                       final List<String> accounts, final String errorMessage,
+                                       final String splitPaymentType) {
         super(description, timestamp);
         this.amountForUsers = amountForUsers;
         this.currency = currency;
         this.accounts = accounts;
+        this.errorMessage = errorMessage;
         this.splitPaymentType = splitPaymentType;
     }
 
@@ -44,6 +47,7 @@ public class TransactionCustomSplitPayment extends Transactions {
             accountsArray.add(account);
         }
         transactionNode.put("involvedAccounts", accountsArray);
+        transactionNode.put("error", errorMessage);
         transactionNode.put("splitPaymentType", getSplitPaymentType());
         transactionNode.put("description", getDescription());
         transactionNode.put("timestamp", getTimestamp());

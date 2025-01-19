@@ -20,6 +20,8 @@ public final class AccountFactory {
                 return new AccountClassic(email, currency, accountType);
             case "savings":
                 return new AccountSavings(email, currency, accountType, interestRate);
+            case "business":
+                return new BusinessAccount(email, currency, accountType);
             default:
                 return null;
         }
