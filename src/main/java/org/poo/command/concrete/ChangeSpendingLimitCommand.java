@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.Setter;
+import org.poo.account.Account;
 import org.poo.account.BusinessAccount;
 import org.poo.command.AppContext;
 import org.poo.command.BaseCommand;
@@ -38,7 +39,10 @@ public class ChangeSpendingLimitCommand extends BaseCommand {
             output.add(error);
             return;
         }
-        BusinessAccount businessAccount = (BusinessAccount) accountMap.get(accountIban);
+        Account account = accountMap.get(accountIban);
+        if(!account.getAccountType().equals("business"))
+            return;
+        BusinessAccount businessAccount = (BusinessAccount) account;
         if(businessAccount.getEmail().equals(userEmail)) {
             businessAccount.setSpendingLimit(command.getSpendingLimit());
         } else {

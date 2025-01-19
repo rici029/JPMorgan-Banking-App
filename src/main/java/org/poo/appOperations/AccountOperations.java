@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.account.AccountSavings;
+import org.poo.account.BusinessAccount;
+import org.poo.businessUser.BusinessUser;
 import org.poo.card.Card;
 import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
@@ -92,19 +94,32 @@ public final class AccountOperations {
      * @param command command input
      */
     public static void addFunds(final HashMap<String, User> usersAccountsMap,
-                                final CommandInput command) {
+                                final CommandInput command, final HashMap<String, Account> accountMap) {
         String iban = command.getAccount();
         double amount = command.getAmount();
         if (!usersAccountsMap.containsKey(iban)) {
             return;
         }
-        User user = usersAccountsMap.get(iban);
-        for (Account account : user.getAccounts()) {
-            if (account.getIban().equals(iban)) {
-                account.deposit(amount);
-                break;
+        Account account = accountMap.get(iban);
+        if(account.getAccountType().equals("business")) {
+            BusinessAccount businessAccount = (BusinessAccount) account;
+            BusinessUser businessUser = null;
+            if(businessAccount.getManagers().containsKey(command.getEmail())) {
+                businessUser = businessAccount.getManagers().get(command.getEmail());
+            } else if(businessAccount.getEmployees().containsKey(command.getEmail())) {
+                businessUser = businessAccount.getEmployees().get(command.getEmail());
             }
+            if(businessUser == null) {
+                return;
+            }
+            if(businessUser.getRole().equals("employee")) {
+                if(businessAccount.getDepositLimit() != 0 && amount > businessAccount.getDepositLimit())
+                    return;
+            }
+            businessUser.setDeposited(businessUser.getDeposited() + amount);
+            businessAccount.setTotalDeposited(businessAccount.getTotalDeposited() + amount);
         }
+        account.deposit(amount);
     }
 
     /**
@@ -122,7 +137,6 @@ public final class AccountOperations {
         if (!usersAccountsMap.containsKey(iban)) {
             return;
         }
-
         User user = usersAccountsMap.get(iban);
         for (Account account : user.getAccounts()) {
             if (account.getIban().equals(iban)) {

@@ -29,10 +29,10 @@ public final class CommandFactory {
         return switch (commandType) {
             case "printUsers" -> new PrintUsersCommand(commandInput, context);
             case "addAccount" -> new AddAccountCommand(commandInput, context);
-            case "createCard", "createOneTimeCard" -> new CreateCardCommand(commandInput, context);
+            case "createCard", "createOneTimeCard" -> new CreateCardCommand(commandInput, context, usersMap);
             case "addFunds" -> new AddFundsCommand(commandInput, context);
             case "deleteAccount" -> new DeleteAccountCommand(commandInput, context);
-            case "deleteCard" -> new DeleteCardCommand(commandInput, context);
+            case "deleteCard" -> new DeleteCardCommand(commandInput, context, usersMap);
             case "setMinimumBalance" -> new SetMinimumBalanceCommand(commandInput, context);
             case "payOnline" -> new PayOnlineCommand(commandInput, context, commerciants);
             case "sendMoney" -> new SendMoneyCommand(commandInput, context);

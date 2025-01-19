@@ -1,6 +1,8 @@
 package org.poo.appOperations;
 
 import org.poo.account.Account;
+import org.poo.account.BusinessAccount;
+import org.poo.businessUser.BusinessUser;
 import org.poo.card.Card;
 import org.poo.fileio.CommandInput;
 import org.poo.transactions.TransactionAction;
@@ -29,12 +31,14 @@ public final class CardOperations {
      * @param command command input
      * @param usersCardsMap map of users and their cards
      * @param cardAccountMap map of cards and their accounts
-     * @param usersAccountsMap map of users and their accounts
+     * @param accountMap map of users and their accounts
+     * @param usersMap map of users
      */
     public static void createCard(final CommandInput command,
                                   final HashMap<String, User> usersCardsMap,
                                   final HashMap<String, Account> cardAccountMap,
-                                  final HashMap<String, User> usersAccountsMap) {
+                                  final HashMap<String, Account> accountMap,
+                                  final HashMap<String, User> usersMap) {
         String email = command.getEmail();
         String cardType;
         if (command.getCommand().equals("createCard")) {
@@ -43,26 +47,22 @@ public final class CardOperations {
             cardType = "onetime";
         }
         String iban = command.getAccount();
-        User user = usersAccountsMap.get(iban);
+        User user = usersMap.get(email);
+        Account account = accountMap.get(iban);
         if(user == null) {
             return;
         }
-        if (!user.getEmail().equals(email)) {
+        if (!user.getEmail().equals(email) && !account.getAccountType().equals("business")) {
             return;
         }
         Card card = new Card(iban, email, cardType);
-        for (Account account : user.getAccounts()) {
-            if (account.getIban().equals(iban)) {
-                account.addCard(card);
-                usersCardsMap.put(card.getCardNumber(), user);
-                cardAccountMap.put(card.getCardNumber(), account);
-                Transactions transaction = new TransactionCard(card.getCardNumber(),
-                        account.getIban(), user.getEmail(), "New card created",
-                        command.getTimestamp());
-                addTransactionToObservers(transaction, user, account);
-                break;
-            }
-        }
+        account.addCard(card);
+        usersCardsMap.put(card.getCardNumber(), user);
+        cardAccountMap.put(card.getCardNumber(), account);
+        Transactions transaction = new TransactionCard(card.getCardNumber(),
+                account.getIban(), user.getEmail(), "New card created",
+                command.getTimestamp());
+        addTransactionToObservers(transaction, user, account);
     }
 
     /**
@@ -73,7 +73,8 @@ public final class CardOperations {
      */
     public static void deleteCard(final HashMap<String, Account> cardAccountMap,
                                   final CommandInput command,
-                                  final  HashMap<String, User> usersCardsMap) {
+                                  final  HashMap<String, User> usersCardsMap,
+                                  final HashMap<String, User> usersMap) {
         String cardNumber = command.getCardNumber();
         if (!cardAccountMap.containsKey(cardNumber)) {
             return;
@@ -81,7 +82,17 @@ public final class CardOperations {
         Account account = cardAccountMap.get(cardNumber);
         for (Card card : account.getCards()) {
             if (card.getCardNumber().equals(cardNumber)) {
-                User user = usersCardsMap.get(cardNumber);
+                if(!usersMap.containsKey(command.getEmail())) {
+                    return;
+                }
+                User user = usersMap.get(command.getEmail());
+                if(account.getAccountType().equals("business")) {
+                    BusinessAccount businessAccount = (BusinessAccount) account;
+                    HashMap<String, BusinessUser> employees = businessAccount.getEmployees();
+                    if(employees.containsKey(user.getEmail()) && !user.getEmail().equals(card.getEmail())) {
+                        return;
+                    }
+                }
                 account.removeCard(card);
                 cardAccountMap.remove(cardNumber);
                 Transactions transaction = new TransactionCard(card.getCardNumber(),

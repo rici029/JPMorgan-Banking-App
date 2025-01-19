@@ -18,6 +18,6 @@ public class AddFundsCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-        AccountOperations.addFunds(usersAccountsMap, command);
+        AccountOperations.addFunds(usersAccountsMap, command, accountMap);
     }
 }

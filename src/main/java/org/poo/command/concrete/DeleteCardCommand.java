@@ -4,13 +4,19 @@ import org.poo.appOperations.CardOperations;
 import org.poo.command.AppContext;
 import org.poo.command.BaseCommand;
 import org.poo.fileio.CommandInput;
+import org.poo.user.User;
+
+import java.util.HashMap;
 
 public class DeleteCardCommand extends BaseCommand {
-    public DeleteCardCommand(final CommandInput command, final AppContext context) {
+    private HashMap<String, User> usersMap;
+    public DeleteCardCommand(final CommandInput command, final AppContext context,
+                             final HashMap<String, User> usersMap) {
         super(command, context.getOutput(), context.getExchangeRates(),
               context.getUsers(), context.getUsersAccountsMap(),
               context.getUsersCardsMap(), context.getCardAccountMap(),
               context.getAccountMap(), context.getAliasAccountMap());
+        this.usersMap = usersMap;
     }
 
     /**
@@ -18,6 +24,6 @@ public class DeleteCardCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-        CardOperations.deleteCard(cardAccountMap, command, usersCardsMap);
+        CardOperations.deleteCard(cardAccountMap, command, usersCardsMap, usersMap);
     }
 }
