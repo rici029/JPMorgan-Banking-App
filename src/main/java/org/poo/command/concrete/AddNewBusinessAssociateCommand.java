@@ -21,10 +21,7 @@ public class AddNewBusinessAssociateCommand extends BaseCommand {
     public AddNewBusinessAssociateCommand(final CommandInput commandInput,
                                           final AppContext context,
                                           final HashMap<String, User> usersMap) {
-        super(commandInput, context.getOutput(), context.getExchangeRates(),
-                context.getUsers(), context.getUsersAccountsMap(),
-                context.getUsersCardsMap(), context.getCardAccountMap(),
-                context.getAccountMap(), context.getAliasAccountMap());
+        super(commandInput, context);
         this.usersMap = usersMap;
     }
 

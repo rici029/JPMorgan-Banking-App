@@ -13,10 +13,7 @@ import org.poo.user.User;
 
 public class DeleteAccountCommand extends BaseCommand {
     public DeleteAccountCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**
@@ -24,7 +21,6 @@ public class DeleteAccountCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-//        AccountOperations.deleteAccount(usersAccountsMap, command, output);
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode response = mapper.createObjectNode();
         response.put("command", command.getCommand());

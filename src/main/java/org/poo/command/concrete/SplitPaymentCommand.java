@@ -12,10 +12,7 @@ public class SplitPaymentCommand extends BaseCommand {
     private ArrayList<SplitPayment> splitPayments;
     public SplitPaymentCommand(final CommandInput command, final AppContext context,
                                final ArrayList<SplitPayment> splitPayments) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
         this.splitPayments = splitPayments;
     }
 

@@ -14,10 +14,7 @@ import java.util.TreeMap;
 
 public class SpendingsReportCommand extends BaseCommand {
     public SpendingsReportCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**
@@ -25,7 +22,6 @@ public class SpendingsReportCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-//        PrintOperations.spendingsReport(command, accountMap, output);
         TreeMap<String, Double> spendings = new TreeMap<>();
 
         if (!accountMap.containsKey(command.getAccount())) {

@@ -13,10 +13,7 @@ import org.poo.user.User;
 
 public class AddInterestCommand extends BaseCommand {
     public AddInterestCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**
@@ -24,7 +21,6 @@ public class AddInterestCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-//        AccountOperations.addInterest(accountMap, command, output, usersAccountsMap);
         String iban = command.getAccount();
         if (!accountMap.containsKey(iban)) {
             return;

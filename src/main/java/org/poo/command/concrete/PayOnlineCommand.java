@@ -13,10 +13,7 @@ public class PayOnlineCommand extends BaseCommand {
     private ArrayList<Commerciant> commerciants;
     public PayOnlineCommand(final CommandInput command, final AppContext context,
                             final ArrayList<Commerciant> commerciants) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
         this.commerciants = commerciants;
     }
 

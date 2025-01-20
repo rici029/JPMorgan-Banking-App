@@ -16,10 +16,7 @@ public class CreateCardCommand extends BaseCommand {
     private final HashMap<String, User> usersMap;
     public CreateCardCommand(final CommandInput command, final AppContext context,
                              final HashMap<String, User> usersMap) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
         this.usersMap = usersMap;
     }
 
@@ -28,8 +25,6 @@ public class CreateCardCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-//        CardOperations.createCard(command, usersCardsMap, cardAccountMap,
-//                accountMap, usersMap);
         String email = command.getEmail();
         String cardType;
         if (command.getCommand().equals("createCard")) {

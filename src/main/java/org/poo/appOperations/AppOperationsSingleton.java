@@ -31,7 +31,6 @@ public final class AppOperationsSingleton {
     private ArrayList<SplitPayment> splitPayments;
     private HashMap<String, User> usersMap;
 
-    // Private constructor to prevent direct instantiation
     private AppOperationsSingleton(final HashMap<String, HashMap<String, Double>> exchangeRates,
                                    final CommandInput[] commands, final ArrayList<User> users,
                                    final ArrayList<Commerciant> commerciants,

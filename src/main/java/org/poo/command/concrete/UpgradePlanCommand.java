@@ -18,10 +18,7 @@ public class UpgradePlanCommand extends BaseCommand {
     private static final int STANDARD_TO_GOLD_UPGRADE = 350;
     private static final int GOLD_IDX = 3;
     public UpgradePlanCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**

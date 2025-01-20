@@ -1,34 +1,39 @@
-# Project Assignment POO  - J. POO Morgan - Phase One
+# J. POO Morgan Chase & Co.
 
-![](https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM2dibmZueTVmbGNoY2kxcDlkdHpsd3hvNDA5ZTRleHcwMzRxM2x0OSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/lJEGgG5ajs4zC/giphy.gif)
+A Java-based banking system that implements various design patterns to manage transactions, accounts, and user operations.
 
-#### Assignment Link: [https://ocw.cs.pub.ro/courses/poo-ca-cd/teme/2024/proiect-etapa2](https://ocw.cs.pub.ro/courses/poo-ca-cd/teme/2024/proiect-etapa2)
+## Design Patterns Used
 
-## Skel Structure
+### 1. Observer Pattern
+- Implemented in the `Transactions` class
+- Observers are notified when new transactions are added
+- Allows for real-time transaction monitoring and updates
+- Uses `TransactionObserver` interface for implementing observers
 
-* src/
-    * checker/ - checker files
-    * fileio/ - contains classes used to read data from the json files
-    * main/
-        * Main - the Main class runs the checker on your implementation. Add the entry point to your implementation in it. Run Main to test your implementation from the IDE or from command line.
-        * Test - run the main method from Test class with the name of the input file from the command line and the result will be written
-          to the out.txt file. Thus, you can compare this result with ref.
-* input/ - contains the tests in JSON format
-* ref/ - contains all reference output for the tests in JSON format
+### 2. Command Pattern
+- Commands are used to encapsulate all banking operations
+- Each operation (e.g., AddAccount, CreateCard, PayOnline) is a separate command
+- Provides easy extensibility for new banking operations
+- Main commands are located in the `command/concrete` package
 
-## Tests
+### 3. Factory Pattern
+- `CommandFactory` creates appropriate command instances
+- Centralizes command object creation
+- Provides flexibility in adding new command types
+- Maintains loose coupling between command creation and execution
 
-Tests Basic 1 - 10: Infrastructure \
-Tests Functional 11 - 17: Advanced \
-Tests Flow 18 - 20: Large Input
+### 4. Singleton Pattern
+- `AppOperationsSingleton` manages global application state
+- Ensures single point of access to application operations
+- Thread-safe implementation with double-checked locking
+- Manages user data, accounts, and transaction history
 
-1. test01_user_updates - 2p
-2. test02_upgrade_plan - 2p
-3. test04_commisions - 2p
-4. test05_savings_update - 2p
-5. test06_cashback - 2p
-6. test07_simple_split_payment - 2p
-7. test08_advanced_split_payment - 2p
-8. test09_business_account_simple - 2p
-9. test10_business_account_limits - 2p
+## Key Features
 
+- Account management (creation, deletion, funds management)
+- Card operations (create, delete, status checking)
+- Online payments and money transfers
+- Split payment functionality
+- Transaction reporting and monitoring
+- Business associate management
+- Multiple currency support with exchange rates

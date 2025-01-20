@@ -17,10 +17,7 @@ public class DeleteCardCommand extends BaseCommand {
     private HashMap<String, User> usersMap;
     public DeleteCardCommand(final CommandInput command, final AppContext context,
                              final HashMap<String, User> usersMap) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
         this.usersMap = usersMap;
     }
 
@@ -29,7 +26,6 @@ public class DeleteCardCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-//        CardOperations.deleteCard(cardAccountMap, command, usersMap);
         String cardNumber = command.getCardNumber();
         if (!cardAccountMap.containsKey(cardNumber)) {
             return;

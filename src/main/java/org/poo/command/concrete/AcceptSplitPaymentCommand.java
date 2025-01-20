@@ -21,10 +21,7 @@ public class AcceptSplitPaymentCommand extends BaseCommand {
     public AcceptSplitPaymentCommand(final CommandInput command, final AppContext context,
                                      final ArrayList<SplitPayment> splitPayments,
                                      final HashMap<String, User> usersMap) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
         this.splitPayments = splitPayments;
         this.usersMap = usersMap;
     }

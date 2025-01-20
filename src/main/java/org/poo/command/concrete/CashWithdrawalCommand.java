@@ -17,10 +17,7 @@ import org.poo.user.User;
 
 public class CashWithdrawalCommand extends BaseCommand {
     public CashWithdrawalCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**

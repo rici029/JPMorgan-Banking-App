@@ -20,22 +20,15 @@ public abstract class BaseCommand implements Command {
     protected final HashMap<String, Account> aliasAccountMap;
     protected final HashMap<String, HashMap<String, Double>> exchangeRates;
 
-    protected BaseCommand(final CommandInput command, final ArrayNode output,
-                          final HashMap<String, HashMap<String, Double>> exchangeRates,
-                          final ArrayList<User> users,
-                          final HashMap<String, User> usersAccountsMap,
-                          final HashMap<String, User> usersCardsMap,
-                          final HashMap<String, Account> cardAccountMap,
-                          final HashMap<String, Account> accountMap,
-                          final HashMap<String, Account> aliasAccountMap) {
+    protected BaseCommand(final CommandInput command, final AppContext context) {
         this.command = command;
-        this.output = output;
-        this.exchangeRates = exchangeRates;
-        this.users = users;
-        this.usersAccountsMap = usersAccountsMap;
-        this.usersCardsMap = usersCardsMap;
-        this.cardAccountMap = cardAccountMap;
-        this.accountMap = accountMap;
-        this.aliasAccountMap = aliasAccountMap;
+        this.output = context.getOutput();
+        this.exchangeRates = context.getExchangeRates();
+        this.users = context.getUsers();
+        this.usersAccountsMap = context.getUsersAccountsMap();
+        this.usersCardsMap = context.getUsersCardsMap();
+        this.cardAccountMap = context.getCardAccountMap();
+        this.accountMap = context.getAccountMap();
+        this.aliasAccountMap = context.getAliasAccountMap();
     }
 }

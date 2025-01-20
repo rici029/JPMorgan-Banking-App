@@ -11,10 +11,7 @@ import org.poo.user.User;
 
 public class PrintTransactionsCommand extends BaseCommand {
     public PrintTransactionsCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**

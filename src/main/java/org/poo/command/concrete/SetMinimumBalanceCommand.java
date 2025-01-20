@@ -8,10 +8,7 @@ import org.poo.user.User;
 
 public class SetMinimumBalanceCommand extends BaseCommand {
     public SetMinimumBalanceCommand(final CommandInput command, final AppContext context) {
-        super(command, context.getOutput(), context.getExchangeRates(),
-              context.getUsers(), context.getUsersAccountsMap(),
-              context.getUsersCardsMap(), context.getCardAccountMap(),
-              context.getAccountMap(), context.getAliasAccountMap());
+        super(command, context);
     }
 
     /**
@@ -19,7 +16,6 @@ public class SetMinimumBalanceCommand extends BaseCommand {
      */
     @Override
     public void execute() {
-//        AccountOperations.setMinimumBalance(usersAccountsMap, command);
         String iban = command.getAccount();
         double minimumBalance = command.getMinBalance();
         if (!usersAccountsMap.containsKey(iban)) {
