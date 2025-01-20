@@ -3,14 +3,12 @@ package org.poo.appOperations;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.poo.account.AccountSavings;
 import org.poo.account.BusinessAccount;
 import org.poo.businessUser.BusinessUser;
 import org.poo.card.Card;
 import org.poo.commerciant.Commerciant;
 import org.poo.fileio.CommandInput;
 import org.poo.transactions.TransactionAction;
-import org.poo.transactions.TransactionInterestRate;
 import org.poo.transactions.TransactionPayment;
 import org.poo.transactions.TransactionTransfer;
 import org.poo.transactions.TransactionUpdatePlan;
@@ -18,7 +16,7 @@ import org.poo.transactions.Transactions;
 import org.poo.transactions.TransactionCard;
 import org.poo.user.User;
 import org.poo.account.Account;
-import org.poo.account.AccountFactory;
+
 import org.poo.utils.Utils;
 import org.poo.commerciant.CommerciantOperation;
 
@@ -35,6 +33,7 @@ public final class AccountOperations {
     private static final int MAXIMUM_PAYMENTS_FOR_UPGRADE = 5;
     private static final int LIMIT_FOR_SILVER = 500;
     private static final int LIMIT_FOR_UPGRADE = 300;
+
     /**
      * Check for commission
      * @param account account to be checked
@@ -75,136 +74,6 @@ public final class AccountOperations {
         transaction.registerObserver(user);
         transaction.registerObserver(account);
         transaction.notifyObservers();
-    }
-
-    /**
-     *
-     * @param users list of users
-     * @param command command input
-     * @param usersAccountsMap map of users and their accounts
-     * @param accountMap map of accounts
-     */
-    public static void addAccount(final ArrayList<User> users, final CommandInput command,
-                                  final HashMap<String, User> usersAccountsMap,
-                                  final HashMap<String, Account> accountMap,
-                                  final HashMap<String, HashMap<String, Double>> exchangeRates) {
-        String email = command.getEmail();
-        String currency = command.getCurrency();
-        String accountType = command.getAccountType();
-        double interestRate = command.getInterestRate();
-        Account account = AccountFactory.createAccount(email, currency, accountType,
-                interestRate, exchangeRates);
-        for (User user : users) {
-            if (user.getEmail().equals(email)) {
-                user.addAccount(account);
-                usersAccountsMap.put(account.getIban(), user);
-                accountMap.put(account.getIban(), account);
-                Transactions transaction = new TransactionAction(command.getTimestamp(),
-                        "New account created");
-                addTransactionToObservers(transaction, user, account);
-                break;
-            }
-        }
-    }
-
-    /**
-     *
-     * @param usersAccountsMap map of users and their accounts
-     * @param command command input
-     */
-    public static void addFunds(final HashMap<String, User> usersAccountsMap,
-                                final CommandInput command,
-                                final HashMap<String, Account> accountMap) {
-        String iban = command.getAccount();
-        double amount = command.getAmount();
-        if (!usersAccountsMap.containsKey(iban)) {
-            return;
-        }
-        Account account = accountMap.get(iban);
-        if (account.getAccountType().equals("business")
-                && !account.getEmail().equals(command.getEmail())) {
-            BusinessAccount businessAccount = (BusinessAccount) account;
-            BusinessUser businessUser = null;
-            if (businessAccount.getManagers().containsKey(command.getEmail())) {
-                businessUser = businessAccount.getManagers().get(command.getEmail());
-            } else if (businessAccount.getEmployees().containsKey(command.getEmail())) {
-                businessUser = businessAccount.getEmployees().get(command.getEmail());
-            }
-            if (businessUser == null) {
-                return;
-            }
-            if (businessUser.getRole().equals("employee")) {
-                if (businessAccount.getDepositLimit() != 0
-                        && amount > businessAccount.getDepositLimit()) {
-                    return;
-                }
-            }
-            businessUser.getDeposited().put(command.getTimestamp(), amount);
-        }
-        account.deposit(amount);
-    }
-
-    /**
-     *
-     * @param usersAccountsMap map of users and their accounts
-     * @param command command input
-     * @param output output array
-     */
-    public static void deleteAccount(final HashMap<String, User> usersAccountsMap,
-                                     final CommandInput command, final ArrayNode output) {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode response = mapper.createObjectNode();
-        response.put("command", command.getCommand());
-        String iban = command.getAccount();
-        if (!usersAccountsMap.containsKey(iban)) {
-            return;
-        }
-        User user = usersAccountsMap.get(iban);
-        for (Account account : user.getAccounts()) {
-            if (account.getIban().equals(iban)) {
-                if (account.getBalance() == 0) {
-                    user.removeAccount(account);
-                    usersAccountsMap.remove(iban);
-                    output.add(PrintOperations.printSuccessJson(command));
-                    break;
-                } else {
-                    ObjectNode error = mapper.createObjectNode();
-                    error.put("error",
-                            "Account couldn't be deleted - see org.poo.transactions for details");
-                    error.put("timestamp", command.getTimestamp());
-                    response.set("output", error);
-                    response.put("timestamp", command.getTimestamp());
-                    output.add(response);
-                    Transactions transaction = new TransactionAction(command.getTimestamp(),
-                            "Account couldn't be deleted - there are funds remaining");
-                    addTransactionToObservers(transaction, user, account);
-                }
-            }
-        }
-    }
-
-    /**
-     *
-     * @param usersAccountsMap map of users and their accounts
-     * @param command command input
-     */
-    public static void setMinimumBalance(final HashMap<String, User> usersAccountsMap,
-                                         final CommandInput command) {
-        String iban = command.getAccount();
-        double minimumBalance = command.getMinBalance();
-        if (!usersAccountsMap.containsKey(iban)) {
-            return;
-        }
-        User user = usersAccountsMap.get(iban);
-        for (Account account : user.getAccounts()) {
-            if (account.getIban().equals(iban)) {
-                if (!account.getEmail().equals(command.getEmail())) {
-                    return;
-                }
-                account.setMinimumBalance(minimumBalance);
-                break;
-            }
-        }
     }
 
     /**
@@ -630,94 +499,5 @@ public final class AccountOperations {
         error.set("output", outNode);
         error.put("timestamp", command.getTimestamp());
         output.add(error);
-    }
-
-    /**
-     *
-     * @param accountMap map of accounts
-     * @param command command input
-     * @param aliasAccountMap map of alias and accounts
-     */
-    public static void setAlias(final HashMap<String, Account> accountMap,
-                                final CommandInput command,
-                                final HashMap<String, Account> aliasAccountMap) {
-        String iban = command.getAccount();
-        String alias = command.getAlias();
-        if (!accountMap.containsKey(iban)) {
-            return;
-        }
-        Account account = accountMap.get(iban);
-        account.setAlias(alias);
-        aliasAccountMap.put(alias, account);
-    }
-    /**
-     *
-     * @param accountMap map of accounts
-     * @param command command input
-     * @param output output array
-     * @param usersAccountMap map of users and their accounts
-     */
-    public static void changeInterestRate(final HashMap<String, Account> accountMap,
-                                          final CommandInput command, final ArrayNode output,
-                                          final HashMap<String, User> usersAccountMap) {
-        String iban = command.getAccount();
-        double interestRate = command.getInterestRate();
-        if (!accountMap.containsKey(iban)) {
-            return;
-        }
-        Account account = accountMap.get(iban);
-        if (account.getAccountType().equals("savings")) {
-            AccountSavings savingsAccount = (AccountSavings) account;
-            savingsAccount.setInterestRate(interestRate);
-            Transactions transaction = new TransactionAction(command.getTimestamp(),
-                    "Interest rate of the account changed to " + interestRate);
-            User user = usersAccountMap.get(iban);
-            addTransactionToObservers(transaction, user, account);
-        } else {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", command.getCommand());
-            ObjectNode outNode = mapper.createObjectNode();
-            outNode.put("timestamp", command.getTimestamp());
-            outNode.put("description", "This is not a savings account");
-            error.set("output", outNode);
-            error.put("timestamp", command.getTimestamp());
-            output.add(error);
-        }
-    }
-
-    /**
-     *
-     * @param accountMap map of accounts
-     * @param command command input
-     * @param output output array
-     */
-    public static void addInterest(final HashMap<String, Account> accountMap,
-                                   final CommandInput command, final ArrayNode output,
-                                   final HashMap<String, User> usersAccountMap) {
-        String iban = command.getAccount();
-        if (!accountMap.containsKey(iban)) {
-            return;
-        }
-        Account account = accountMap.get(iban);
-        if (!account.getAccountType().equals("savings")) {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode error = mapper.createObjectNode();
-            error.put("command", command.getCommand());
-            ObjectNode outNode = mapper.createObjectNode();
-            outNode.put("timestamp", command.getTimestamp());
-            outNode.put("description", "This is not a savings account");
-            error.set("output", outNode);
-            error.put("timestamp", command.getTimestamp());
-            output.add(error);
-            return;
-        }
-        AccountSavings savingsAccount = (AccountSavings) account;
-        double interest = savingsAccount.getInterestRate() * savingsAccount.getBalance();
-        savingsAccount.setBalance(savingsAccount.getBalance() + interest);
-        Transactions transaction = new TransactionInterestRate(command.getTimestamp(),
-                "Interest rate income", interest, savingsAccount.getCurrency());
-        User user = usersAccountMap.get(iban);
-        addTransactionToObservers(transaction, user, account);
     }
 }
